@@ -3,16 +3,18 @@
 
 Uzima prvu 'pending' temu iz topics.json, generira članak preko Lumenta
 internog endpointa (§4), featured sliku preko Leonardo API-ja, i objavljuje
-na WordPress preko REST API-ja. Bez vanjskih pip ovisnosti (samo stdlib) —
-na serveru nema postavljenog pip/venv-a, a HTTP pozivi ovdje ne trebaju ništa
-osim urllib-a.
+na WordPress preko REST API-ja. HTTP pozivi idu preko urllib-a (stdlib);
+jedina vanjska ovisnost je Pillow, za normalizaciju featured slike prije
+uploada (već instaliran na hostu).
 
-Sigurnosna zadrška: post je UVIJEK status "draft" osim ako je proslijeđen
---publish. --dry-run zaobilazi Lumenta i Leonardo pozive mock/placeholder
-podacima, za testiranje cijelog tijeka bez API ključeva.
+Post ide kao "draft" po defaultu; --publish ga objavljuje odmah (cron
+koristi --publish nakon što je kvaliteta ručno potvrđena). --dry-run
+zaobilazi Lumenta i Leonardo pozive mock/placeholder podacima, za
+testiranje cijelog tijeka bez API ključeva.
 """
 import argparse
 import base64
+import io
 import json
 import mimetypes
 import os
@@ -21,6 +23,8 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+from PIL import Image
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 ENV_PATH = PROJECT_DIR / ".env"
@@ -219,6 +223,44 @@ def wp_auth_header(env):
     return {"Authorization": f"Basic {token}"}
 
 
+IMAGE_TARGET_WIDTH = 1280
+IMAGE_TARGET_RATIO = 16 / 9  # 1.78 — unutar IG-ovog 1.91:1 limita
+IMAGE_MAX_BYTES = 8 * 1024 * 1024
+
+
+def process_image(image_bytes):
+    """Normalizira featured sliku prije uploada: JPEG q85, 1280px širina,
+    16:9 (center-crop na omjer pa resize). Leonardo/placeholder slike dolaze
+    u različitim omjerima i formatima (npr. hero je bio 1344x768) — ovo
+    garantira dosljedan izlaz bez obzira na izvor."""
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    width, height = img.size
+    current_ratio = width / height
+
+    if current_ratio > IMAGE_TARGET_RATIO:
+        new_width = round(height * IMAGE_TARGET_RATIO)
+        left = (width - new_width) // 2
+        img = img.crop((left, 0, left + new_width, height))
+    elif current_ratio < IMAGE_TARGET_RATIO:
+        new_height = round(width / IMAGE_TARGET_RATIO)
+        top = (height - new_height) // 2
+        img = img.crop((0, top, width, top + new_height))
+
+    target_height = round(IMAGE_TARGET_WIDTH / IMAGE_TARGET_RATIO)
+    img = img.resize((IMAGE_TARGET_WIDTH, target_height), Image.LANCZOS)
+
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    jpeg_bytes = buf.getvalue()
+
+    if len(jpeg_bytes) > IMAGE_MAX_BYTES:
+        raise RuntimeError(
+            f"Obrađena slika ima {len(jpeg_bytes)} bajtova — prelazi {IMAGE_MAX_BYTES} bajtova limit."
+        )
+
+    return jpeg_bytes, "image/jpeg"
+
+
 def upload_media(image_bytes, filename, content_type, env):
     def do_upload():
         headers = wp_auth_header(env)
@@ -335,6 +377,8 @@ def main():
             sys.exit(0)
 
         image_bytes, content_type = call_leonardo(article["title"], env, args.dry_run, tags=topic.get("tags"))
+        image_bytes, content_type = process_image(image_bytes)
+        log(f"  slika obrađena: {len(image_bytes)} bajtova, {content_type}")
         ext = mimetypes.guess_extension(content_type) or ".jpg"
         media_id = upload_media(image_bytes, f"{slug}{ext}", content_type, env)
         log(f"  slika uploadana, media_id={media_id}")
