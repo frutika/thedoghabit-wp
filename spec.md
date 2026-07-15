@@ -62,7 +62,7 @@ Lokacija: `/opt/thedoghabit/` (ili uz postojeće projekte). Jezik: Python 3 (req
 
 ### Tijek
 
-1. **Odabir teme:** iz `topics.json` — redovita queue lista tema s poljima `{title_seed, category, keywords[], status}`. Skripta uzima prvu s `status: pending`, nakon objave označi `done`. Kad queue padne ispod 10, logiraj upozorenje (ili auto-generiraj nove teme dodatnim Lumenta/API pozivom).
+1. **Odabir teme:** iz `topics.json` — redovita queue lista tema s poljima `{title_seed, category, keywords[], status}`. Skripta uzima prvu s `status: pending`, nakon objave označi `done`. Kad queue padne ispod 10, auto-refill: Lumenta tool `blog_topic_ideas` generira 20 novih tema (dedup po naslovu, validacija kategorije); fail je non-fatalan (log + Telegram alert).
 2. **Generiranje članka:** POST na Lumenta interni endpoint (§4) s temom, kategorijom, keywordima, `language: en`, `tone: professional/casual mix`. Očekivani output: naslov, full article (HTML/markdown), meta title, meta description, slug, FAQ blok, interni link anchori.
 3. **Featured slika:** Leonardo API — prompt izveden iz naslova (fotorealistična slika psa u kontekstu teme, bez teksta na slici). Download → upload na WP media (`/wp-json/wp/v2/media`).
 4. **Objava:** POST `/wp-json/wp/v2/posts` — title, content (uključi FAQ na kraju), slug, category ID, featured_media ID, meta polja za SEO plugin, `status: publish`.
@@ -78,7 +78,7 @@ Kasnije po potrebi 2x dnevno. Dodati random delay 0–30 min da objave ne izgled
 ### Pouzdanost
 
 - Retry s backoffom (3 pokušaja) na svaki API poziv.
-- Ako bilo koji korak padne: NE objavljivati polovičan post; logirati u `/var/log/thedoghabit.log` i poslati alert (email ili Telegram bot).
+- Ako bilo koji korak padne: NE objavljivati polovičan post; logirati u `logs/generate_post.log` i poslati Telegram alert (`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` u `.env`; ako nisu postavljeni, alert se preskače).
 - Idempotentnost: prije objave provjeri postoji li već post s istim slugom.
 - Secrets u `.env` (LUMENTA_API_KEY, LEONARDO_API_KEY, WP_APP_PASSWORD) — nikad u kodu.
 
@@ -106,6 +106,9 @@ Napomene:
 - API key po korisniku, scope na postojeći credit sustav.
 - Ovo kasnije postaje javni Lumenta feature ("API access" — Business plan differentiator).
 - Za blog tool osigurati da output sadrži: `title, article_html, meta_title, meta_description, slug, faq[], internal_anchors[]`.
+- **Dodati i tool `blog_topic_ideas`** (koristi ga auto-refill u `generate_post.py`): input `{niche, categories[], existing_titles[], count, language}` → output `{"topics": [{title_seed, category, keywords[]}]}`. Dok tool ne postoji na Lumenti, refill samo logira grešku i šalje alert — objava ide dalje.
+
+Napomena (WP strana): `wp/mu-plugins/thedoghabit-rest-meta.php` izlaže `rank_math_title`, `rank_math_description`, `rank_math_focus_keyword` i `thedoghabit_faq` preko REST-a, i renderira FAQPage JSON-LD u `wp_head` na single postovima. Deploy: `scripts/deploy_wp_assets.sh`.
 
 ---
 

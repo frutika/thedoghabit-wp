@@ -100,6 +100,22 @@ def http_request(method, url, headers=None, data=None, timeout=30):
         return resp.status, body
 
 
+def send_alert(msg, env):
+    """Pošalji alert na Telegram (spec §3 'Pouzdanost'). Best-effort: ako
+    TELEGRAM_* varovi nisu postavljeni ili poziv padne, samo logiraj —
+    alert nikad ne smije srušiti pipeline."""
+    token = env.get("TELEGRAM_BOT_TOKEN")
+    chat_id = env.get("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+    try:
+        payload = json.dumps({"chat_id": chat_id, "text": f"[thedoghabit] {msg}"}).encode()
+        http_request("POST", f"https://api.telegram.org/bot{token}/sendMessage",
+                     headers={"Content-Type": "application/json"}, data=payload, timeout=10)
+    except Exception as e:
+        log(f"  Telegram alert nije poslan: {e}")
+
+
 def retry(fn, attempts=3, base_delay=2, what=""):
     last_err = None
     for attempt in range(1, attempts + 1):
@@ -216,6 +232,69 @@ def call_leonardo(title, env, dry_run, tags=None):
         raise RuntimeError(f"Leonardo generacija {generation_id} nije završila na vrijeme")
 
     return retry(do_call, what="Leonardo image generation")
+
+
+REFILL_THRESHOLD = 10
+REFILL_COUNT = 20
+
+
+def refill_topics(topics, env, dry_run):
+    """Dopuni topics.json novim temama preko Lumenta 'blog_topic_ideas' toola
+    kad queue padne ispod praga (spec §3, korak 1). Non-fatalno: ako poziv
+    padne, logiraj + alert i nastavi s postojećim temama."""
+    if dry_run:
+        log("  [dry-run] preskačem auto-refill tema")
+        return topics
+
+    existing = [t["title_seed"] for t in topics]
+
+    def do_call():
+        payload = json.dumps({
+            "tool": "blog_topic_ideas",
+            "input": {
+                "niche": ("dog training, behavior, common problems, gear, "
+                          "daily habits, puppies — practical guides for everyday dog owners"),
+                "categories": list(CATEGORY_NAMES.keys()),
+                "existing_titles": existing,
+                "count": REFILL_COUNT,
+                "language": "en",
+            },
+        }).encode()
+        headers = {
+            "Authorization": f"Bearer {env['LUMENTA_API_KEY']}",
+            "Content-Type": "application/json",
+        }
+        status, body = http_request("POST", f"{env['LUMENTA_API_URL']}/api/v1/generate",
+                                     headers=headers, data=payload, timeout=120)
+        return json.loads(body)["output"]["topics"]
+
+    try:
+        new_topics = retry(do_call, what="Lumenta topic refill")
+    except Exception as e:
+        log(f"  auto-refill nije uspio: {e}")
+        send_alert(f"auto-refill tema nije uspio: {e}", env)
+        return topics
+
+    existing_lower = {t.lower() for t in existing}
+    added = 0
+    for nt in new_topics:
+        title = (nt.get("title_seed") or nt.get("title") or "").strip()
+        category = nt.get("category")
+        if not title or title.lower() in existing_lower or category not in CATEGORY_NAMES:
+            continue
+        topics.append({
+            "title_seed": title,
+            "category": category,
+            "keywords": nt.get("keywords") or [],
+            "status": "pending",
+        })
+        existing_lower.add(title.lower())
+        added += 1
+
+    if added:
+        save_topics(topics)
+    log(f"  auto-refill: dodano {added} novih tema u topics.json.")
+    return topics
 
 
 def wp_auth_header(env):
@@ -335,7 +414,7 @@ def build_content(article_html, faq, related):
     return "\n".join(parts)
 
 
-def create_post(title, slug, content, excerpt, category_id, media_id, status, env, tag_ids=None):
+def create_post(title, slug, content, excerpt, category_id, media_id, status, env, tag_ids=None, meta=None):
     def do_create():
         payload = json.dumps({
             "title": title,
@@ -346,6 +425,7 @@ def create_post(title, slug, content, excerpt, category_id, media_id, status, en
             "categories": [category_id],
             "featured_media": media_id,
             "tags": tag_ids or [],
+            "meta": meta or {},
         }).encode()
         headers = wp_auth_header(env)
         headers["Content-Type"] = "application/json"
@@ -368,11 +448,14 @@ def main():
     topics = load_topics()
 
     pending = [t for t in topics if t["status"] == "pending"]
+    if len(pending) < REFILL_THRESHOLD:
+        log(f"Queue ispod praga ({len(pending)}/{REFILL_THRESHOLD} pending) — pokrećem auto-refill.")
+        topics = refill_topics(topics, env, args.dry_run)
+        pending = [t for t in topics if t["status"] == "pending"]
     if not pending:
         log("Nema 'pending' tema u topics.json — ništa za objaviti.")
+        send_alert("topics.json queue je prazan (refill nije pomogao) — post NIJE objavljen.", env)
         sys.exit(1)
-    if len(pending) < 10:
-        log(f"UPOZORENJE: samo {len(pending)} pending tema preostalo u topics.json.")
 
     topic = pending[0]
     log(f"Odabrana tema: '{topic['title_seed']}' ({topic['category']})")
@@ -409,6 +492,16 @@ def main():
         if args.publish and not args.dry_run:
             status = "publish"
 
+        # Rank Math meta + FAQ schema idu kao post meta — REST ih prihvaća
+        # preko mu-plugina thedoghabit-rest-meta.php (register_post_meta).
+        keywords = topic.get("keywords") or []
+        meta = {
+            "rank_math_title": article.get("meta_title") or article["title"],
+            "rank_math_description": article.get("meta_description", ""),
+            "rank_math_focus_keyword": keywords[0] if keywords else "",
+            "thedoghabit_faq": json.dumps(article.get("faq") or [], ensure_ascii=False),
+        }
+
         post = create_post(
             title=article["title"],
             slug=slug,
@@ -419,11 +512,13 @@ def main():
             status=status,
             env=env,
             tag_ids=tag_ids,
+            meta=meta,
         )
         log(f"Post kreiran: id={post['id']} status={post['status']} link={post.get('link')}")
 
     except Exception as e:
         log(f"GREŠKA — post NIJE objavljen: {e}")
+        send_alert(f"GREŠKA — post NIJE objavljen ('{topic['title_seed']}'): {e}", env)
         sys.exit(1)
 
     topic["status"] = "done"
