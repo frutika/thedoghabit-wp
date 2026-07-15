@@ -1,0 +1,44 @@
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MYSQL_DATABASE}
+      MARIADB_USER: ${MYSQL_USER}
+      MARIADB_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  wordpress:
+    image: wordpress:php8.3-apache
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      # WP Application Passwords su po defaultu dostupne samo preko SSL ili 'local'
+      # environment tipa (wp_is_application_passwords_available() u wp-includes/user.php).
+      # Dok thedoghabit.com nema live DNS/certbot SSL, ovo dopušta autopost REST auth
+      # preko HTTP-a za testiranje. Nakon što certbot postavi HTTPS ovo više neće biti
+      # potrebno (is_ssl() će biti true), ali može ostati bez štete.
+      WP_ENVIRONMENT_TYPE: local
+    ports:
+      - "127.0.0.1:8092:80"
+    volumes:
+      - wp_data:/var/www/html
+
+volumes:
+  db_data:
+  wp_data:
