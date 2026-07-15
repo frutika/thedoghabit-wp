@@ -102,3 +102,28 @@ function tdh_post_grid( WP_Query $query, $empty_text ) {
 		echo '<p class="tdh-empty-note">' . esc_html( $empty_text ) . '</p>';
 	}
 }
+
+/**
+ * WordPress's default RSS feed doesn't expose the featured image anywhere
+ * (no <enclosure>, no <img> in content:encoded) — Make.com's RSS module
+ * needs an <enclosure> to offer a mappable "Photo URL" for the
+ * Instagram/Pinterest modules (spec.md §5).
+ */
+add_action( 'rss2_item', function () {
+	if ( ! has_post_thumbnail() ) {
+		return;
+	}
+
+	$thumbnail_id = get_post_thumbnail_id();
+	$image_url    = get_the_post_thumbnail_url( get_the_ID(), 'large' );
+	$image_path   = get_attached_file( $thumbnail_id );
+	$filesize     = $image_path ? filesize( $image_path ) : 0;
+	$mime_type    = get_post_mime_type( $thumbnail_id );
+
+	printf(
+		'<enclosure url="%s" length="%d" type="%s" />' . "\n",
+		esc_url( $image_url ),
+		(int) $filesize,
+		esc_attr( $mime_type )
+	);
+} );
