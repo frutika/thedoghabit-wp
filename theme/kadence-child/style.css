@@ -1,0 +1,187 @@
+/*
+Theme Name: The Dog Habit (Kadence Child)
+Template: kadence
+Version: 1.0.0
+*/
+
+:root {
+	--global-palette1: #C96F4A; /* accent: links, buttons */
+	--global-palette2: #B15E3B; /* accent hover */
+	--global-palette3: #2B2622; /* headings / dark text */
+	--global-palette4: #2B2622;
+	--global-palette5: #5C554E; /* muted text */
+	--global-palette6: #7A9E7E; /* secondary: categories, tags */
+	--global-palette7: #E8DFD3; /* card / section background */
+	--global-palette8: #F1EAE0;
+	--global-palette9: #FFFFFF; /* button text on accent bg */
+}
+
+body {
+	background-color: #FAF7F2;
+	color: #2B2622;
+	font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6,
+.site-title,
+.entry-title,
+.tdh-hero-title,
+.tdh-section-title,
+.tdh-category-name {
+	font-family: 'Fraunces', Georgia, serif;
+	font-weight: 600;
+	color: #2B2622;
+}
+
+a {
+	color: #C96F4A;
+}
+a:hover {
+	color: #B15E3B;
+}
+
+/* Buttons: pill shape, flat, no shadow/gradient */
+button,
+.button,
+.wp-block-button__link,
+input[type="submit"],
+input[type="button"],
+.tdh-pill-button {
+	background-color: #C96F4A;
+	background-image: none;
+	color: #FFFFFF;
+	border: none;
+	border-radius: 999px;
+	box-shadow: none;
+	padding: 0.75em 1.75em;
+	font-family: 'Inter', sans-serif;
+	font-weight: 600;
+	text-decoration: none;
+	display: inline-block;
+	transition: background-color 0.2s ease;
+}
+button:hover,
+.button:hover,
+.wp-block-button__link:hover,
+input[type="submit"]:hover,
+.tdh-pill-button:hover {
+	background-color: #B15E3B;
+	color: #FFFFFF;
+}
+
+*, *::before, *::after {
+	box-shadow: none !important;
+}
+
+/* Categories / tags */
+.entry-taxonomies,
+.entry-taxonomies a,
+.tdh-hero-cat,
+.tdh-category-name {
+	color: #7A9E7E;
+}
+.tdh-hero-cat {
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	font-size: 0.8rem;
+	font-weight: 600;
+	display: inline-block;
+	margin-bottom: 0.5rem;
+}
+
+/* Text logo: accent-colored dot after site title */
+.site-title::after {
+	content: ".";
+	color: #C96F4A;
+}
+
+/* Hero */
+.tdh-hero {
+	padding: 4.5rem 1.5rem;
+}
+.tdh-hero-inner {
+	max-width: 1100px;
+	margin: 0 auto;
+	display: grid;
+	grid-template-columns: 1.1fr 1fr;
+	gap: 3.5rem;
+	align-items: center;
+}
+.tdh-hero-empty .tdh-hero-inner {
+	grid-template-columns: 1fr;
+	text-align: center;
+	max-width: 700px;
+}
+.tdh-hero-media img {
+	border-radius: 20px;
+	width: 100%;
+	height: auto;
+	display: block;
+}
+.tdh-hero-title {
+	font-size: 2.6rem;
+	line-height: 1.15;
+	margin: 0.25rem 0 1.25rem;
+}
+.tdh-hero-title a {
+	color: inherit;
+	text-decoration: none;
+}
+.tdh-hero-excerpt {
+	color: #5C554E;
+	margin-bottom: 1.75rem;
+	line-height: 1.65;
+	font-size: 1.05rem;
+}
+
+/* Category grid */
+.tdh-categories {
+	max-width: 1100px;
+	margin: 0 auto;
+	padding: 3rem 1.5rem 6rem;
+}
+.tdh-section-title {
+	font-size: 1.9rem;
+	margin-bottom: 2.5rem;
+	text-align: center;
+}
+.tdh-category-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 1.75rem;
+}
+.tdh-category-card {
+	background-color: #E8DFD3;
+	border-radius: 18px;
+	padding: 2rem;
+	text-decoration: none;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	transition: transform 0.2s ease;
+}
+.tdh-category-card:hover {
+	transform: translateY(-3px);
+}
+.tdh-category-card-media img {
+	border-radius: 12px;
+	width: 100%;
+	height: 160px;
+	object-fit: cover;
+	margin-bottom: 0.5rem;
+}
+.tdh-category-desc {
+	color: #5C554E;
+	font-size: 0.95rem;
+	margin: 0;
+	line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+	.tdh-hero-inner {
+		grid-template-columns: 1fr;
+	}
+	.tdh-category-grid {
+		grid-template-columns: 1fr;
+	}
+}
