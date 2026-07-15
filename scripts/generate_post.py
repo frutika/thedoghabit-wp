@@ -46,6 +46,8 @@ BREED_DOG_DESCRIPTIONS = {
     ),
 }
 
+LEONARDO_STYLE_ID = "111dc692-d470-4eec-b791-3475abac4c46"
+
 
 def log(msg):
     line = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}"
@@ -179,14 +181,22 @@ def call_leonardo(title, env, dry_run, tags=None):
             "Content-Type": "application/json",
         }
         payload = json.dumps({
-            "prompt": prompt,
-            "num_images": 1,
-            "width": 1024,
-            "height": 768,
+            "model": "lucid-origin",
+            "public": True,
+            "parameters": {
+                "prompt": prompt,
+                "quantity": 1,
+                "width": 1024,
+                "height": 768,
+                "prompt_enhance": "OFF",
+                "style_ids": [LEONARDO_STYLE_ID],
+            },
         }).encode()
-        _, body = http_request("POST", "https://cloud.leonardo.ai/api/rest/v1/generations",
+        # v2 create + v1 poll: status/rezultat live pod istim v1 GET-om bez obzira
+        # koja verzija je generaciju kreirala (potvrđeno ručnim testom 2026-07-15).
+        _, body = http_request("POST", "https://cloud.leonardo.ai/api/rest/v2/generations",
                                 headers=headers, data=payload)
-        generation_id = json.loads(body)["sdGenerationJob"]["generationId"]
+        generation_id = json.loads(body)["generate"]["generationId"]
 
         status_url = f"https://cloud.leonardo.ai/api/rest/v1/generations/{generation_id}"
         for _ in range(30):
