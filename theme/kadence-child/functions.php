@@ -106,9 +106,15 @@ function tdh_post_grid( WP_Query $query, $empty_text ) {
 /**
  * WordPress's default RSS feed doesn't expose the featured image anywhere
  * (no <enclosure>, no <img> in content:encoded) — Make.com's RSS module
- * needs an <enclosure> to offer a mappable "Photo URL" for the
- * Instagram/Pinterest modules (spec.md §5).
+ * needs it to offer a mappable "Photo URL" for the Instagram/Pinterest
+ * modules (spec.md §5). Emit both <enclosure> AND <media:content> — RSS
+ * automation tools vary in which one they parse into a clean URL field,
+ * emitting both maximizes the chance Make picks one up cleanly.
  */
+add_action( 'rss2_ns', function () {
+	echo 'xmlns:media="http://search.yahoo.com/mrss/"' . "\n";
+} );
+
 add_action( 'rss2_item', function () {
 	if ( ! has_post_thumbnail() ) {
 		return;
@@ -119,11 +125,20 @@ add_action( 'rss2_item', function () {
 	$image_path   = get_attached_file( $thumbnail_id );
 	$filesize     = $image_path ? filesize( $image_path ) : 0;
 	$mime_type    = get_post_mime_type( $thumbnail_id );
+	$image_meta   = wp_get_attachment_image_src( $thumbnail_id, 'large' );
 
 	printf(
 		'<enclosure url="%s" length="%d" type="%s" />' . "\n",
 		esc_url( $image_url ),
 		(int) $filesize,
 		esc_attr( $mime_type )
+	);
+
+	printf(
+		'<media:content url="%s" type="%s" medium="image" width="%d" height="%d" />' . "\n",
+		esc_url( $image_url ),
+		esc_attr( $mime_type ),
+		$image_meta ? (int) $image_meta[1] : 0,
+		$image_meta ? (int) $image_meta[2] : 0
 	);
 } );
