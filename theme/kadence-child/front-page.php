@@ -40,18 +40,21 @@ $tdh_hero_subtitle = get_theme_mod( 'tdh_hero_subtitle', 'Practical training, be
 	</section>
 
 	<section class="tdh-latest-posts">
-		<h2 class="tdh-section-title">Latest posts</h2>
-		<?php
-		$tdh_latest = new WP_Query( [
-			'post_type'      => 'post',
-			'post_status'    => 'publish',
-			'posts_per_page' => 6,
-		] );
-		tdh_post_grid( $tdh_latest, 'New guides are on the way — check back soon.' );
-		?>
+		<div class="tdh-latest-posts-inner">
+			<h2 class="tdh-section-title">Latest posts</h2>
+			<?php
+			$tdh_latest = new WP_Query( [
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'posts_per_page' => 6,
+			] );
+			tdh_post_grid( $tdh_latest, 'New guides are on the way — check back soon.' );
+			?>
+		</div>
 	</section>
 
 	<section class="tdh-categories">
+		<div class="tdh-categories-inner">
 		<h2 class="tdh-section-title">Browse by category</h2>
 		<div class="tdh-category-grid">
 			<?php
@@ -61,22 +64,21 @@ $tdh_hero_subtitle = get_theme_mod( 'tdh_hero_subtitle', 'Practical training, be
 			] );
 
 			foreach ( $tdh_categories as $tdh_cat ) :
-				$tdh_recent = get_posts( [
-					'category'       => $tdh_cat->term_id,
-					'posts_per_page' => 1,
-					'post_status'    => 'publish',
-				] );
 				?>
 				<a href="<?php echo esc_url( get_category_link( $tdh_cat->term_id ) ); ?>" class="tdh-category-card">
-					<?php if ( $tdh_recent && has_post_thumbnail( $tdh_recent[0]->ID ) ) : ?>
-						<div class="tdh-category-card-media"><?php echo get_the_post_thumbnail( $tdh_recent[0]->ID, 'medium' ); ?></div>
-					<?php endif; ?>
 					<span class="tdh-category-name"><?php echo esc_html( $tdh_cat->name ); ?></span>
-					<?php if ( $tdh_cat->description ) : ?>
-						<p class="tdh-category-desc"><?php echo esc_html( $tdh_cat->description ); ?></p>
-					<?php endif; ?>
+					<span class="tdh-category-count">
+						<?php
+						printf(
+							/* translators: %d: number of posts in this category */
+							esc_html( _n( '%d guide', '%d guides', $tdh_cat->count, 'kadence-child' ) ),
+							(int) $tdh_cat->count
+						);
+						?>
+					</span>
 				</a>
 			<?php endforeach; ?>
+			</div>
 		</div>
 	</section>
 

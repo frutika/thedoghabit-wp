@@ -95,13 +95,20 @@ input[type="submit"]:hover,
 	color: #C96F4A;
 }
 
+/* Shared content-width container for every homepage section */
+.tdh-hero-inner,
+.tdh-newsletter-inner,
+.tdh-latest-posts-inner,
+.tdh-categories-inner {
+	max-width: 1140px;
+	margin: 0 auto;
+}
+
 /* Hero */
 .tdh-hero {
-	padding: 4.5rem 1.5rem;
+	padding: 5rem 1.5rem;
 }
 .tdh-hero-inner {
-	max-width: 1100px;
-	margin: 0 auto;
 	display: grid;
 	grid-template-columns: 1.1fr 1fr;
 	gap: 3.5rem;
@@ -134,135 +141,56 @@ input[type="submit"]:hover,
 	font-size: 1.05rem;
 }
 
-/* Category grid */
-.tdh-categories {
-	max-width: 1100px;
-	margin: 0 auto;
-	padding: 3rem 1.5rem 6rem;
+/* Section vertical rhythm (shared by categories / latest-posts / newsletter) */
+.tdh-categories,
+.tdh-latest-posts {
+	padding: 5rem 1.5rem;
 }
 .tdh-section-title {
 	font-size: 1.9rem;
 	margin-bottom: 2.5rem;
 	text-align: center;
 }
-.tdh-category-grid {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 1.75rem;
-}
-.tdh-category-card {
-	background-color: #E8DFD3;
-	border-radius: 18px;
-	padding: 2rem;
-	text-decoration: none;
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-	transition: transform 0.2s ease;
-}
-.tdh-category-card:hover {
-	transform: translateY(-3px);
-}
-.tdh-category-card-media img {
-	border-radius: 12px;
-	width: 100%;
-	height: 160px;
-	object-fit: cover;
-	margin-bottom: 0.5rem;
-}
-.tdh-category-desc {
-	color: #5C554E;
-	font-size: 0.95rem;
-	margin: 0;
-	line-height: 1.5;
-}
 
-/* Footer navigation */
-.tdh-footer-nav-wrap {
-	padding: 2.5rem 1.5rem 0;
-}
-.tdh-footer-menu {
-	list-style: none;
-	display: flex;
-	justify-content: center;
-	flex-wrap: wrap;
-	gap: 2rem;
-	margin: 0 auto;
-	padding: 0;
-	max-width: 1100px;
-}
-.tdh-footer-menu a {
-	color: #5C554E;
-	text-decoration: none;
-	font-size: 0.95rem;
-}
-.tdh-footer-menu a:hover {
-	color: #C96F4A;
-}
-
-/* Newsletter signup */
-.tdh-newsletter {
-	background-color: #E8DFD3;
-	padding: 4rem 1.5rem;
-}
-.tdh-newsletter-inner {
-	max-width: 600px;
-	margin: 0 auto;
-	text-align: center;
-}
-.tdh-newsletter-sub {
-	color: #5C554E;
-	margin-bottom: 1.75rem;
-}
-.tdh-newsletter-form {
-	display: flex;
-	gap: 0.75rem;
-	justify-content: center;
-	flex-wrap: wrap;
-}
-.tdh-newsletter-input {
-	flex: 1 1 260px;
-	max-width: 320px;
-	padding: 0.75em 1.25em;
-	border-radius: 999px;
-	border: 1px solid #D8CDBC;
-	background-color: #FAF7F2;
-	font-family: 'Inter', sans-serif;
-	font-size: 1rem;
-	color: #2B2622;
-}
-.tdh-newsletter-input:focus {
-	outline: 2px solid #C96F4A;
-	outline-offset: 2px;
-}
-.tdh-newsletter-note {
-	margin-top: 1rem;
-	color: #7A9E7E;
-	font-weight: 600;
-}
-
-/* Post grid: latest posts, breed hub pages */
-.tdh-latest-posts {
-	max-width: 1100px;
-	margin: 0 auto;
-	padding: 4rem 1.5rem;
-}
+/* Shared card look: category cards + post cards */
+.tdh-category-grid,
 .tdh-post-grid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
 	gap: 1.75rem;
+	align-items: stretch;
 }
+.tdh-category-card,
 .tdh-post-card {
-	background-color: #E8DFD3;
-	border-radius: 18px;
-	overflow: hidden;
+	background-color: #FFFFFF;
+	border: 1px solid #E8DFD3;
+	border-radius: 8px;
 	text-decoration: none;
 	display: flex;
-	flex-direction: column;
-	transition: transform 0.2s ease;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+.tdh-category-card:hover,
 .tdh-post-card:hover {
 	transform: translateY(-3px);
+}
+
+/* Category card: name + post count, no image, uniform height via grid stretch */
+.tdh-category-card {
+	flex-direction: column;
+	justify-content: center;
+	gap: 0.4rem;
+	padding: 2rem;
+	min-height: 140px;
+}
+.tdh-category-count {
+	color: #5C554E;
+	font-size: 0.9rem;
+}
+
+/* Post card: image on top, category label, Fraunces title, excerpt */
+.tdh-post-card {
+	flex-direction: column;
+	overflow: hidden;
 }
 .tdh-post-card-media img {
 	width: 100%;
@@ -293,13 +221,77 @@ input[type="submit"]:hover,
 	color: #5C554E;
 }
 
+/* Newsletter signup */
+.tdh-newsletter {
+	background-color: #E8DFD3;
+	padding: 5rem 1.5rem;
+}
+.tdh-newsletter-inner {
+	text-align: center;
+}
+.tdh-newsletter-sub {
+	color: #5C554E;
+	margin-bottom: 1.75rem;
+}
+.tdh-newsletter-form {
+	max-width: 480px;
+	margin: 0 auto;
+	display: flex;
+	gap: 0.75rem;
+	justify-content: center;
+	flex-wrap: wrap;
+}
+.tdh-newsletter-input {
+	flex: 1 1 220px;
+	padding: 0.75em 1.25em;
+	border-radius: 999px;
+	border: 1px solid #D8CDBC;
+	background-color: #FAF7F2;
+	font-family: 'Inter', sans-serif;
+	font-size: 1rem;
+	color: #2B2622;
+}
+.tdh-newsletter-input:focus {
+	outline: 2px solid #C96F4A;
+	outline-offset: 2px;
+}
+.tdh-newsletter-note {
+	margin-top: 1rem;
+	color: #7A9E7E;
+	font-weight: 600;
+}
+
+/* Native Kadence footer builder: widget column (brand blurb) + nav column */
+.site-footer .widget-title {
+	font-size: 1.2rem;
+}
+.site-footer .textwidget {
+	color: #5C554E;
+	font-size: 0.95rem;
+	line-height: 1.6;
+}
+.footer-navigation .footer-menu-container ul {
+	list-style: none;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1.5rem;
+	margin: 0;
+	padding: 0;
+}
+.footer-navigation .footer-menu-container a {
+	color: #5C554E;
+	text-decoration: none;
+	font-size: 0.95rem;
+}
+.footer-navigation .footer-menu-container a:hover {
+	color: #C96F4A;
+}
+
 @media (max-width: 760px) {
 	.tdh-hero-inner {
 		grid-template-columns: 1fr;
 	}
-	.tdh-category-grid {
-		grid-template-columns: 1fr;
-	}
+	.tdh-category-grid,
 	.tdh-post-grid {
 		grid-template-columns: 1fr;
 	}

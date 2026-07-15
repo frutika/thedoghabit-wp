@@ -11,11 +11,15 @@ add_action( 'wp_enqueue_scripts', function () {
 		null
 	);
 
+	// filemtime umjesto fiksnog theme Version stringa — Cloudflare kešira
+	// style.css po URL-u (uklj. ?ver=), pa statična verzija znači da izmjene
+	// ostanu nevidljive do isteka edge cachea (do 4h). filemtime mijenja URL
+	// na svaki save, što garantira cache-miss i svjež fetch odmah.
 	wp_enqueue_style(
 		'kadence-child-style',
 		get_stylesheet_uri(),
 		[ 'kadence-global', 'kadence-header', 'kadence-content', 'kadence-footer' ],
-		wp_get_theme()->get( 'Version' )
+		filemtime( get_stylesheet_directory() . '/style.css' )
 	);
 }, 20 );
 
@@ -56,24 +60,6 @@ add_action( 'customize_register', function ( $wp_customize ) {
 		'section' => 'tdh_hero',
 		'type'    => 'text',
 	] );
-} );
-
-/**
- * Kadence's footer builder has no menu row by default — inject one before
- * the copyright row so Appearance > Menus > Footer location is actually used.
- */
-add_action( 'kadence_before_footer', function () {
-	if ( ! has_nav_menu( 'footer' ) ) {
-		return;
-	}
-	echo '<div class="tdh-footer-nav-wrap"><nav class="tdh-footer-nav" aria-label="Footer">';
-	wp_nav_menu( [
-		'theme_location' => 'footer',
-		'container'      => false,
-		'menu_class'     => 'tdh-footer-menu',
-		'depth'          => 1,
-	] );
-	echo '</nav></div>';
 } );
 
 /**
