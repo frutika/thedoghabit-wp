@@ -466,9 +466,10 @@ def main():
 
         if post_exists(slug, env):
             log(f"Post sa slugom '{slug}' već postoji — preskačem (idempotentnost).")
-            topic["status"] = "done"
-            save_topics(topics)
-            log("Tema označena kao 'done' u topics.json (post već postoji).")
+            if not args.dry_run:
+                topic["status"] = "done"
+                save_topics(topics)
+                log("Tema označena kao 'done' u topics.json (post već postoji).")
             sys.exit(0)
 
         image_bytes, content_type = call_leonardo(article["title"], env, args.dry_run, tags=topic.get("tags"))
@@ -521,6 +522,9 @@ def main():
         send_alert(f"GREŠKA — post NIJE objavljen ('{topic['title_seed']}'): {e}", env)
         sys.exit(1)
 
+    if args.dry_run:
+        log("[dry-run] tema NIJE označena kao 'done' — topics.json netaknut.")
+        return
     topic["status"] = "done"
     save_topics(topics)
     log("Tema označena kao 'done' u topics.json.")
