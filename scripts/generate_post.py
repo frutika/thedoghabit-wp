@@ -37,6 +37,15 @@ CATEGORY_NAMES = {
     "puppies": "Puppy Basics",
 }
 
+# Konzistentan izgled "maskote" psa za breed-specifičan sadržaj (npr. JRT hub) —
+# isti opis se koristi za hero sliku (ručno) i ovdje za post slike, po tag-u.
+BREED_DOG_DESCRIPTIONS = {
+    "jack-russell": (
+        "white and tan smooth-coat Jack Russell Terrier, looking at camera, "
+        "soft natural light, photorealistic, warm tones"
+    ),
+}
+
 
 def log(msg):
     line = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}"
@@ -147,7 +156,7 @@ def call_lumenta(topic, env, dry_run):
     return retry(do_call, what="Lumenta generate")
 
 
-def call_leonardo(title, env, dry_run):
+def call_leonardo(title, env, dry_run, tags=None):
     if dry_run:
         log("  [dry-run] koristim placeholder sliku umjesto Leonardo API-ja")
         return PLACEHOLDER_IMAGE.read_bytes(), "image/jpeg"
@@ -155,8 +164,16 @@ def call_leonardo(title, env, dry_run):
     def do_call():
         # Leonardo generacija je asinkrona: POST vraća generationId, GET se polla
         # dok status ne postane COMPLETE (obično par sekundi).
-        prompt = (f"Photorealistic photo of a dog, context: {title}. "
-                  "Natural lighting, no text, no watermark.")
+        breed_description = next(
+            (BREED_DOG_DESCRIPTIONS[t] for t in (tags or []) if t in BREED_DOG_DESCRIPTIONS),
+            None,
+        )
+        if breed_description:
+            prompt = (f"{breed_description}, context: {title}. "
+                      "Natural lighting, no text, no watermark.")
+        else:
+            prompt = (f"Photorealistic photo of a dog, context: {title}. "
+                      "Natural lighting, no text, no watermark.")
         headers = {
             "Authorization": f"Bearer {env['LEONARDO_API_KEY']}",
             "Content-Type": "application/json",
@@ -307,7 +324,7 @@ def main():
             log(f"Post sa slugom '{slug}' već postoji — preskačem (idempotentnost).")
             sys.exit(0)
 
-        image_bytes, content_type = call_leonardo(article["title"], env, args.dry_run)
+        image_bytes, content_type = call_leonardo(article["title"], env, args.dry_run, tags=topic.get("tags"))
         ext = mimetypes.guess_extension(content_type) or ".jpg"
         media_id = upload_media(image_bytes, f"{slug}{ext}", content_type, env)
         log(f"  slika uploadana, media_id={media_id}")
