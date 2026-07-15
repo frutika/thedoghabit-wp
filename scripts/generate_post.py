@@ -209,6 +209,26 @@ def get_categories(env):
     return {c["slug"]: c["id"] for c in json.loads(body)}
 
 
+def get_or_create_tag_id(slug, env):
+    def do_lookup():
+        status, body = http_request("GET", f"{env['WP_URL']}/wp-json/wp/v2/tags?slug={slug}")
+        return json.loads(body)
+
+    existing = retry(do_lookup, what=f"WP tag lookup '{slug}'")
+    if existing:
+        return existing[0]["id"]
+
+    def do_create():
+        payload = json.dumps({"name": slug, "slug": slug}).encode()
+        headers = wp_auth_header(env)
+        headers["Content-Type"] = "application/json"
+        status, body = http_request("POST", f"{env['WP_URL']}/wp-json/wp/v2/tags",
+                                     headers=headers, data=payload)
+        return json.loads(body)["id"]
+
+    return retry(do_create, what=f"WP tag create '{slug}'")
+
+
 def post_exists(slug, env):
     status, body = http_request("GET", f"{env['WP_URL']}/wp-json/wp/v2/posts?slug={slug}")
     return len(json.loads(body)) > 0
@@ -237,7 +257,7 @@ def build_content(article_html, faq, related):
     return "\n".join(parts)
 
 
-def create_post(title, slug, content, excerpt, category_id, media_id, status, env):
+def create_post(title, slug, content, excerpt, category_id, media_id, status, env, tag_ids=None):
     def do_create():
         payload = json.dumps({
             "title": title,
@@ -247,6 +267,7 @@ def create_post(title, slug, content, excerpt, category_id, media_id, status, en
             "status": status,
             "categories": [category_id],
             "featured_media": media_id,
+            "tags": tag_ids or [],
         }).encode()
         headers = wp_auth_header(env)
         headers["Content-Type"] = "application/json"
@@ -299,6 +320,8 @@ def main():
         related = get_related_posts(category_id, env, limit=3)
         content = build_content(article["article_html"], article.get("faq", []), related)
 
+        tag_ids = [get_or_create_tag_id(slug, env) for slug in topic.get("tags", [])]
+
         status = "draft"
         if args.publish and not args.dry_run:
             status = "publish"
@@ -312,6 +335,7 @@ def main():
             media_id=media_id,
             status=status,
             env=env,
+            tag_ids=tag_ids,
         )
         log(f"Post kreiran: id={post['id']} status={post['status']} link={post.get('link')}")
 

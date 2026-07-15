@@ -18,3 +18,101 @@ add_action( 'wp_enqueue_scripts', function () {
 		wp_get_theme()->get( 'Version' )
 	);
 }, 20 );
+
+/**
+ * Homepage hero — editable via Customizer so content updates don't need code changes.
+ */
+add_action( 'customize_register', function ( $wp_customize ) {
+	$wp_customize->add_section( 'tdh_hero', [
+		'title'    => 'Homepage Hero',
+		'priority' => 30,
+	] );
+
+	$wp_customize->add_setting( 'tdh_hero_image', [
+		'default'           => '',
+		'sanitize_callback' => 'esc_url_raw',
+	] );
+	$wp_customize->add_control( new WP_Customize_Image_Control( $wp_customize, 'tdh_hero_image', [
+		'label'   => 'Hero Image',
+		'section' => 'tdh_hero',
+	] ) );
+
+	$wp_customize->add_setting( 'tdh_hero_title', [
+		'default'           => 'The Dog Habit',
+		'sanitize_callback' => 'sanitize_text_field',
+	] );
+	$wp_customize->add_control( 'tdh_hero_title', [
+		'label'   => 'Hero Title',
+		'section' => 'tdh_hero',
+		'type'    => 'text',
+	] );
+
+	$wp_customize->add_setting( 'tdh_hero_subtitle', [
+		'default'           => 'Practical training, behavior tips, and daily habits for happier dogs.',
+		'sanitize_callback' => 'sanitize_text_field',
+	] );
+	$wp_customize->add_control( 'tdh_hero_subtitle', [
+		'label'   => 'Hero Subtitle',
+		'section' => 'tdh_hero',
+		'type'    => 'text',
+	] );
+} );
+
+/**
+ * Kadence's footer builder has no menu row by default — inject one before
+ * the copyright row so Appearance > Menus > Footer location is actually used.
+ */
+add_action( 'kadence_before_footer', function () {
+	if ( ! has_nav_menu( 'footer' ) ) {
+		return;
+	}
+	echo '<div class="tdh-footer-nav-wrap"><nav class="tdh-footer-nav" aria-label="Footer">';
+	wp_nav_menu( [
+		'theme_location' => 'footer',
+		'container'      => false,
+		'menu_class'     => 'tdh-footer-menu',
+		'depth'          => 1,
+	] );
+	echo '</nav></div>';
+} );
+
+/**
+ * Shared post-card markup for grids (homepage latest posts, breed hub pages).
+ * Must be called inside a WP_Query loop (relies on the_post() global state).
+ */
+function tdh_post_card() {
+	ob_start();
+	?>
+	<a href="<?php the_permalink(); ?>" class="tdh-post-card">
+		<?php if ( has_post_thumbnail() ) : ?>
+			<div class="tdh-post-card-media"><?php the_post_thumbnail( 'medium_large' ); ?></div>
+		<?php endif; ?>
+		<?php
+		$tdh_card_cats = get_the_category();
+		if ( $tdh_card_cats ) :
+			?>
+			<span class="tdh-post-card-cat"><?php echo esc_html( $tdh_card_cats[0]->name ); ?></span>
+		<?php endif; ?>
+		<h3 class="tdh-post-card-title"><?php the_title(); ?></h3>
+		<p class="tdh-post-card-excerpt"><?php echo esc_html( wp_trim_words( get_the_excerpt(), 18 ) ); ?></p>
+	</a>
+	<?php
+	return ob_get_clean();
+}
+
+/**
+ * Renders a post grid from a WP_Query, or a fallback message when it's empty.
+ */
+function tdh_post_grid( WP_Query $query, $empty_text ) {
+	if ( $query->have_posts() ) {
+		echo '<div class="tdh-post-grid">';
+		while ( $query->have_posts() ) {
+			$query->the_post();
+			echo tdh_post_card(); // phpcs:ignore -- escaped inside tdh_post_card()
+		}
+		wp_reset_postdata();
+		echo '</div>';
+	} else {
+		echo '<p class="tdh-empty-note">' . esc_html( $empty_text ) . '</p>';
+	}
+}

@@ -17,7 +17,7 @@
       "stop dog pulling",
       "loose leash walking"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "title_seed": "How to Train a Reliable Recall (Even Around Distractions)",
@@ -296,6 +296,136 @@
       "puppy proofing house",
       "puppy proof home",
       "puppy safety checklist"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Jack Russell Terrier Training: Taming the High-Energy Genius",
+    "category": "training",
+    "keywords": [
+      "jack russell terrier training",
+      "high energy dog training",
+      "smart dog breed training"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "How to Stop a Jack Russell Terrier From Digging and Escaping",
+    "category": "training",
+    "keywords": [
+      "jack russell terrier digging",
+      "stop dog escaping yard",
+      "terrier escape artist"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Why Jack Russell Terriers Bark So Much (and What to Do About It)",
+    "category": "behavior",
+    "keywords": [
+      "jack russell terrier barking",
+      "why terriers bark",
+      "reduce dog barking"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Jack Russell Terrier Prey Drive: Managing the Hunter Instinct",
+    "category": "behavior",
+    "keywords": [
+      "jack russell terrier prey drive",
+      "terrier hunting instinct",
+      "manage dog prey drive"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Jack Russell Terrier Separation Anxiety: Causes and Fixes",
+    "category": "problems",
+    "keywords": [
+      "jack russell terrier separation anxiety",
+      "terrier home alone",
+      "dog separation anxiety fix"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Why Does My Jack Russell Terrier Never Get Tired?",
+    "category": "problems",
+    "keywords": [
+      "jack russell terrier energy level",
+      "terrier never tired",
+      "high energy dog breed problems"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Best Harnesses and Leashes for Jack Russell Terriers",
+    "category": "gear",
+    "keywords": [
+      "best harness jack russell terrier",
+      "terrier leash recommendations",
+      "small dog escape proof harness"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Best Interactive Toys for Jack Russell Terriers",
+    "category": "gear",
+    "keywords": [
+      "best toys jack russell terrier",
+      "interactive dog toys smart breeds",
+      "durable toys for terriers"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Daily Exercise Routine for a Jack Russell Terrier",
+    "category": "habits",
+    "keywords": [
+      "jack russell terrier exercise routine",
+      "daily dog exercise needs",
+      "terrier exercise requirements"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Jack Russell Terrier Puppy: First 90 Days Guide",
+    "category": "puppies",
+    "keywords": [
+      "jack russell terrier puppy",
+      "new terrier puppy guide",
+      "puppy first 90 days"
+    ],
+    "tags": [
+      "jack-russell"
     ],
     "status": "pending"
   }
