@@ -8,6 +8,7 @@ get_header();
 $tdh_hero_image    = get_theme_mod( 'tdh_hero_image', '' );
 $tdh_hero_title    = get_theme_mod( 'tdh_hero_title', 'The Dog Habit' );
 $tdh_hero_subtitle = get_theme_mod( 'tdh_hero_subtitle', 'Practical training, behavior tips, and daily habits for happier dogs.' );
+$tdh_blog_url       = get_permalink( get_option( 'page_for_posts' ) ) ?: home_url( '/blog/' );
 ?>
 
 <div class="tdh-home">
@@ -22,7 +23,7 @@ $tdh_hero_subtitle = get_theme_mod( 'tdh_hero_subtitle', 'Practical training, be
 			<div class="tdh-hero-content">
 				<h1 class="tdh-hero-title"><?php echo esc_html( $tdh_hero_title ); ?></h1>
 				<p class="tdh-hero-excerpt"><?php echo esc_html( $tdh_hero_subtitle ); ?></p>
-				<a href="<?php echo esc_url( home_url( '/blog/' ) ); ?>" class="tdh-pill-button">Browse all guides</a>
+				<a href="<?php echo esc_url( $tdh_blog_url ); ?>" class="tdh-pill-button">Browse all guides</a>
 			</div>
 		</div>
 	</section>

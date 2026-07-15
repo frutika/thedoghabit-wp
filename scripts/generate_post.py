@@ -274,8 +274,11 @@ def upload_media(image_bytes, filename, content_type, env):
 
 
 def get_categories(env):
-    status, body = http_request("GET", f"{env['WP_URL']}/wp-json/wp/v2/categories?per_page=100")
-    return {c["slug"]: c["id"] for c in json.loads(body)}
+    def do_call():
+        status, body = http_request("GET", f"{env['WP_URL']}/wp-json/wp/v2/categories?per_page=100")
+        return {c["slug"]: c["id"] for c in json.loads(body)}
+
+    return retry(do_call, what="WP categories fetch")
 
 
 def get_or_create_tag_id(slug, env):
@@ -299,14 +302,20 @@ def get_or_create_tag_id(slug, env):
 
 
 def post_exists(slug, env):
-    status, body = http_request("GET", f"{env['WP_URL']}/wp-json/wp/v2/posts?slug={slug}")
-    return len(json.loads(body)) > 0
+    def do_call():
+        status, body = http_request("GET", f"{env['WP_URL']}/wp-json/wp/v2/posts?slug={slug}")
+        return len(json.loads(body)) > 0
+
+    return retry(do_call, what="WP post-exists check")
 
 
 def get_related_posts(category_id, env, limit=3):
-    url = f"{env['WP_URL']}/wp-json/wp/v2/posts?categories={category_id}&per_page={limit}&orderby=date"
-    status, body = http_request("GET", url)
-    return [{"title": p["title"]["rendered"], "link": p["link"]} for p in json.loads(body)]
+    def do_call():
+        url = f"{env['WP_URL']}/wp-json/wp/v2/posts?categories={category_id}&per_page={limit}&orderby=date"
+        status, body = http_request("GET", url)
+        return [{"title": p["title"]["rendered"], "link": p["link"]} for p in json.loads(body)]
+
+    return retry(do_call, what="WP related posts fetch")
 
 
 def build_content(article_html, faq, related):
@@ -374,6 +383,9 @@ def main():
 
         if post_exists(slug, env):
             log(f"Post sa slugom '{slug}' već postoji — preskačem (idempotentnost).")
+            topic["status"] = "done"
+            save_topics(topics)
+            log("Tema označena kao 'done' u topics.json (post već postoji).")
             sys.exit(0)
 
         image_bytes, content_type = call_leonardo(article["title"], env, args.dry_run, tags=topic.get("tags"))

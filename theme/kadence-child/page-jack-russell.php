@@ -19,16 +19,18 @@ get_header();
 	</section>
 
 	<section class="tdh-latest-posts">
-		<h2 class="tdh-section-title">Jack Russell Terrier guides</h2>
-		<?php
-		$tdh_jrt = new WP_Query( [
-			'post_type'      => 'post',
-			'post_status'    => 'publish',
-			'posts_per_page' => 12,
-			'tag'            => 'jack-russell',
-		] );
-		tdh_post_grid( $tdh_jrt, 'New Jack Russell Terrier guides are on the way — check back soon.' );
-		?>
+		<div class="tdh-latest-posts-inner">
+			<h2 class="tdh-section-title">Jack Russell Terrier guides</h2>
+			<?php
+			$tdh_jrt = new WP_Query( [
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'posts_per_page' => 12,
+				'tag'            => 'jack-russell',
+			] );
+			tdh_post_grid( $tdh_jrt, 'New Jack Russell Terrier guides are on the way — check back soon.' );
+			?>
+		</div>
 	</section>
 
 </div>
