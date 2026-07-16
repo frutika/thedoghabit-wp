@@ -397,6 +397,45 @@ def get_related_posts(category_id, env, limit=3):
     return retry(do_call, what="WP related posts fetch")
 
 
+def build_product_picks(topic, article):
+    """Amazon search preporuke za gear postove ({name, query} parovi). Preferira
+    'product_picks' iz Lumenta outputa (ako ih tool ikad počne vraćati); fallback
+    su keywordi teme kao search upiti. Same linkove (i affiliate tag) gradi WP
+    mu-plugin thedoghabit-affiliate.php u trenutku renderiranja — tako se tag
+    može postaviti naknadno i vrijedi retroaktivno za sve gear postove."""
+    import re
+
+    picks = []
+    for p in article.get("product_picks") or []:
+        name = (p.get("name") or "").strip()
+        query = (p.get("query") or name).strip()
+        if name and query:
+            picks.append({"name": name, "query": query})
+
+    if not picks:
+        taken = []
+        for kw in topic.get("keywords") or []:
+            # "best dog harness for pulling" → "Dog Harness For Pulling";
+            # informacijski sufiksi ("buying guide", "review"...) nisu proizvodi.
+            clean = re.sub(r"^(best|top|choosing|picking)\s+(an?\s+|the\s+)?", "",
+                           kw.strip(), flags=re.IGNORECASE)
+            clean = re.sub(r"\s+(buying guide|guide|reviews?|benefits|chart|recommendations?)$", "",
+                           clean, flags=re.IGNORECASE).strip()
+            lower = clean.lower()
+            # Fraze koje opisuju psa/problem, a ne proizvod ("fast eating dog"),
+            # i generičke fraze već pokrivene specifičnijim pickom ("harness"
+            # nakon "no-pull harness") ne postaju kutije.
+            if not clean or lower.endswith(("dog", "dogs")):
+                continue
+            if any(lower in t or t in lower for t in taken):
+                continue
+            taken.append(lower)
+            name = re.sub(r"\bGps\b", "GPS", clean.title())
+            picks.append({"name": name, "query": clean})
+
+    return picks[:4]
+
+
 def build_content(article_html, faq, related):
     parts = [article_html]
 
@@ -502,6 +541,14 @@ def main():
             "rank_math_focus_keyword": keywords[0] if keywords else "",
             "thedoghabit_faq": json.dumps(article.get("faq") or [], ensure_ascii=False),
         }
+
+        # Gear postovi dobivaju "Recommended Gear" affiliate sekciju — renderira
+        # je mu-plugin thedoghabit-affiliate.php iz ovog meta polja.
+        if topic["category"] == "gear":
+            picks = build_product_picks(topic, article)
+            if picks:
+                meta["thedoghabit_products"] = json.dumps(picks, ensure_ascii=False)
+                log(f"  gear post: {len(picks)} product pick(ova) u thedoghabit_products meta.")
 
         post = create_post(
             title=article["title"],

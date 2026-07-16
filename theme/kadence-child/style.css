@@ -1,7 +1,7 @@
 /*
 Theme Name: The Dog Habit (Kadence Child)
 Template: kadence
-Version: 1.0.0
+Version: 1.1.0
 */
 
 :root {
@@ -219,6 +219,45 @@ input[type="submit"]:hover,
 .tdh-empty-note {
 	text-align: center;
 	color: #5C554E;
+}
+
+/* Affiliate gear boxes (mu-plugin thedoghabit-affiliate.php) */
+.tdh-affiliate-disclosure {
+	font-size: 0.85rem;
+	color: #5C554E;
+	background-color: #F1EAE0;
+	border-radius: 8px;
+	padding: 0.75em 1.25em;
+	margin-bottom: 1.5rem;
+}
+.tdh-gear-section {
+	margin: 2.5rem 0;
+}
+.tdh-gear-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1.5rem;
+	flex-wrap: wrap;
+	background-color: #FFFFFF;
+	border: 1px solid #E8DFD3;
+	border-radius: 8px;
+	padding: 1.25rem 1.5rem;
+	margin-bottom: 1rem;
+}
+.tdh-gear-name {
+	font-size: 1.1rem;
+	margin: 0;
+}
+.tdh-gear-note {
+	color: #5C554E;
+	font-size: 0.9rem;
+	margin: 0.35rem 0 0;
+}
+.tdh-gear-link {
+	white-space: nowrap;
+	flex-shrink: 0;
+	font-size: 0.9rem;
 }
 
 /* Newsletter signup */
