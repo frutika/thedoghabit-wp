@@ -23,6 +23,19 @@ add_action( 'wp_enqueue_scripts', function () {
 	);
 }, 20 );
 
+// Preconnect na font CDN-ove — bez ovoga browser otkriva fonts.gstatic.com
+// tek nakon što parsira Google Fonts CSS, što gura fontove (i FCP) unatrag.
+add_filter( 'wp_resource_hints', function ( $urls, $relation_type ) {
+	if ( 'preconnect' === $relation_type ) {
+		$urls[] = [ 'href' => 'https://fonts.googleapis.com' ];
+		$urls[] = [
+			'href'        => 'https://fonts.gstatic.com',
+			'crossorigin' => 'anonymous',
+		];
+	}
+	return $urls;
+}, 10, 2 );
+
 /**
  * Homepage hero — editable via Customizer so content updates don't need code changes.
  */

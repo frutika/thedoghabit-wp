@@ -17,7 +17,28 @@ $tdh_blog_url       = get_permalink( get_option( 'page_for_posts' ) ) ?: home_ur
 		<div class="tdh-hero-inner">
 			<?php if ( $tdh_hero_image ) : ?>
 				<div class="tdh-hero-media">
-					<img src="<?php echo esc_url( $tdh_hero_image ); ?>" alt="<?php echo esc_attr( $tdh_hero_title ); ?>" />
+					<?php
+					// LCP element: preko attachment ID-a dobivamo srcset (mobitel
+					// povuče manju verziju umjesto full JPEG-a) i width/height
+					// (rezerviran prostor = bez CLS-a); fetchpriority=high jer je
+					// ovo najveći above-the-fold element.
+					$tdh_hero_id = attachment_url_to_postid( $tdh_hero_image );
+					if ( $tdh_hero_id ) {
+						echo wp_get_attachment_image( $tdh_hero_id, 'large', false, [
+							'fetchpriority' => 'high',
+							'loading'       => 'eager',
+							'decoding'      => 'async',
+							'alt'           => $tdh_hero_title,
+							'sizes'         => '(max-width: 767px) 100vw, 600px',
+						] );
+					} else {
+						// Customizer URL koji nije u Media Library — bez srcset-a,
+						// ali barem s prioritetom.
+						?>
+						<img src="<?php echo esc_url( $tdh_hero_image ); ?>" alt="<?php echo esc_attr( $tdh_hero_title ); ?>" fetchpriority="high" decoding="async" />
+						<?php
+					}
+					?>
 				</div>
 			<?php endif; ?>
 			<div class="tdh-hero-content">
