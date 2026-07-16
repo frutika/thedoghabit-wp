@@ -1,7 +1,7 @@
 /*
 Theme Name: The Dog Habit (Kadence Child)
 Template: kadence
-Version: 1.1.0
+Version: 1.2.0
 */
 
 :root {
@@ -93,6 +93,18 @@ input[type="submit"]:hover,
 .site-title::after {
 	content: ".";
 	color: #C96F4A;
+}
+
+/* Header logo (custom_logo — mark + wordmark u jednoj slici) */
+.site-branding img.custom-logo {
+	max-height: 46px;
+	width: auto;
+}
+
+/* Footer: razdjelnik prema sadržaju (npr. "Browse by category" na naslovnici) */
+.site-footer {
+	border-top: 1px solid #E8DFD3;
+	margin-top: 2rem;
 }
 
 /* Shared content-width container for every homepage section */
