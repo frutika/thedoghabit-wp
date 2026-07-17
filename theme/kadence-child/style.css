@@ -350,6 +350,11 @@ input[type="submit"]:hover,
 	justify-content: center;
 	padding: 1.5rem;
 }
+/* display:flex bi inače pregazio [hidden] atribut (UA display:none) */
+#tdh-cookie-modal[hidden],
+#tdh-cookie-banner[hidden] {
+	display: none;
+}
 body.tdh-cc-modal-open {
 	overflow: hidden;
 }
