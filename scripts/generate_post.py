@@ -175,7 +175,10 @@ def call_lumenta(topic, env, dry_run):
                                      headers=headers, data=payload)
         return json.loads(body)["output"]
 
-    return retry(do_call, what="Lumenta generate")
+    # Anthropic zna vraćati 529 Overloaded u prozorima od više minuta (viđeno
+    # 17.7.2026. u 07:00 UTC — default 3x s 2-4 s razmaka svi padnu u isti
+    # prozor); širi razmaci daju ~4.5 min pokrića prije odustajanja.
+    return retry(do_call, attempts=4, base_delay=45, what="Lumenta generate")
 
 
 def call_leonardo(title, env, dry_run, tags=None):
