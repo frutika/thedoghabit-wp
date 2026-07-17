@@ -504,6 +504,15 @@ def main():
 
     try:
         article = call_lumenta(topic, env, args.dry_run)
+
+        # Make.com HTTP modul slaže JSON body ručno (jsonString, bez escapanja)
+        # iz RSS naslova i excerpta — dvostruki navodnik ili newline u tim
+        # poljima ruši JSON i lomi IG/Pinterest granu (viđeno 17.7.2026.).
+        # Sanitiziraj na izvoru: navodnici → apostrofi, newline → razmak.
+        for key in ("title", "meta_title", "meta_description"):
+            if article.get(key):
+                article[key] = article[key].replace('"', "'").replace("\n", " ").strip()
+
         slug = article["slug"] or slugify(article["title"])
 
         if post_exists(slug, env):
