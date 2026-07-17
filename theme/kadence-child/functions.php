@@ -21,7 +21,73 @@ add_action( 'wp_enqueue_scripts', function () {
 		[ 'kadence-global', 'kadence-header', 'kadence-content', 'kadence-footer' ],
 		filemtime( get_stylesheet_directory() . '/style.css' )
 	);
+
+	wp_enqueue_script(
+		'tdh-cookie-consent',
+		get_stylesheet_directory_uri() . '/cookie-consent.js',
+		[],
+		filemtime( get_stylesheet_directory() . '/cookie-consent.js' ),
+		true
+	);
 }, 20 );
+
+/**
+ * Cookie consent banner + settings modal (GDPR). Markup ide na svaku stranicu
+ * (stranice su keširane pa PHP ne zna stanje pristanka) — vidljivošću upravlja
+ * cookie-consent.js preko localStorage 'tdh_consent'. Banner je hidden po
+ * defaultu da nema bljeska kod posjetitelja s pristankom.
+ */
+add_action( 'wp_footer', function () {
+	?>
+	<div id="tdh-cookie-banner" hidden>
+		<div class="tdh-cc-banner-inner">
+			<p class="tdh-cc-text">
+				We use essential cookies to make this site work. With your consent, we may also
+				use analytics cookies to understand how the site is used. Read more in our
+				<a href="<?php echo esc_url( home_url( '/cookie-policy/' ) ); ?>">Cookie Policy</a>.
+			</p>
+			<div class="tdh-cc-actions">
+				<button type="button" class="tdh-pill-button tdh-cc-accept">Accept all</button>
+				<button type="button" class="tdh-cc-btn-secondary tdh-cc-essential">Essential only</button>
+				<button type="button" class="tdh-cc-link tdh-cc-open-settings">Cookie settings</button>
+			</div>
+		</div>
+	</div>
+	<div id="tdh-cookie-modal" hidden>
+		<div class="tdh-cc-modal-card" role="dialog" aria-modal="true" aria-labelledby="tdh-cc-modal-title">
+			<button type="button" class="tdh-cc-close" aria-label="Close">&times;</button>
+			<h2 id="tdh-cc-modal-title">Cookie settings</h2>
+			<p class="tdh-cc-modal-sub">
+				Manage how this site may use cookies and similar technologies. Essential cookies
+				cannot be turned off because the site does not work without them. See our
+				<a href="<?php echo esc_url( home_url( '/cookie-policy/' ) ); ?>">Cookie Policy</a> for details.
+			</p>
+			<div class="tdh-cc-category">
+				<div class="tdh-cc-category-info">
+					<h3>Essential</h3>
+					<p>Security, load balancing, and saving your cookie preferences.</p>
+				</div>
+				<span class="tdh-cc-always">Always active</span>
+			</div>
+			<div class="tdh-cc-category">
+				<div class="tdh-cc-category-info">
+					<h3>Analytics</h3>
+					<p>Help us understand how visitors use the site. We currently use no analytics
+					cookies; if we introduce them, they will load only with your consent.</p>
+				</div>
+				<label class="tdh-cc-switch">
+					<input type="checkbox" id="tdh-cc-analytics" />
+					<span class="tdh-cc-slider"></span>
+				</label>
+			</div>
+			<div class="tdh-cc-modal-actions">
+				<button type="button" class="tdh-pill-button tdh-cc-save">Save preferences</button>
+				<button type="button" class="tdh-cc-btn-secondary tdh-cc-modal-accept">Accept all</button>
+			</div>
+		</div>
+	</div>
+	<?php
+} );
 
 // Preconnect na font CDN-ove — bez ovoga browser otkriva fonts.gstatic.com
 // tek nakon što parsira Google Fonts CSS, što gura fontove (i FCP) unatrag.
