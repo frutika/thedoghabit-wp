@@ -625,6 +625,10 @@ def main():
         segments = script["segments"]
         if not segments:
             raise RuntimeError("Lumenta skripta nema segmenata.")
+        # Cijela skripta (s image promptovima) uz video — bez ovoga se promptovi
+        # gube pa se slike ne mogu ciljano popraviti/regenerirati naknadno.
+        (workdir / "script.json").write_text(
+            json.dumps(script, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         log(f"  skripta: {len(segments)} segmenata")
 
         narration = " ".join(s["text"].strip() for s in segments)
