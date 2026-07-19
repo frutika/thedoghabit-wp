@@ -116,7 +116,10 @@ def retry(fn, attempts=3, base_delay=2, what=""):
 
 def run_cmd(cmd, cwd, what):
     """Pokreni vanjski alat (ffmpeg/ffprobe); na grešci digni s repom stderr-a."""
-    proc = subprocess.run([str(c) for c in cmd], cwd=str(cwd), capture_output=True)
+    # stdin=DEVNULL: ffmpeg bez toga čita stdin (interaktivne komande) i zna
+    # progutati input pozivatelja kad se skripta vrti kroz pipe/ssh.
+    proc = subprocess.run([str(c) for c in cmd], cwd=str(cwd), capture_output=True,
+                          stdin=subprocess.DEVNULL)
     if proc.returncode != 0:
         tail = proc.stderr.decode(errors="replace")[-800:]
         raise RuntimeError(f"'{what}' nije uspio (exit {proc.returncode}): {tail}")
