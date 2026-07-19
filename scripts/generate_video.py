@@ -50,6 +50,25 @@ LOG_PATH = PROJECT_DIR / "logs" / "generate_video.log"
 
 LEONARDO_STYLE_ID = "111dc692-d470-4eec-b791-3475abac4c46"
 
+# Rotacija pasmina: jedan video = jedna pasmina (konzistentna kroz sve kadrove),
+# sljedeći video sljedeća pasmina — redoslijed određuje broj već obrađenih
+# videa u videos.json. Opisi uključuju boju dlake radi konzistentnih slika.
+VIDEO_BREEDS = [
+    "golden retriever with a light golden coat",
+    "black and white border collie",
+    "chocolate brown labrador retriever",
+    "french bulldog with a fawn coat",
+    "german shepherd with a classic black and tan coat",
+    "tricolor beagle",
+    "pembroke welsh corgi with a red and white coat",
+    "australian shepherd with a blue merle coat",
+    "small white and tan smooth-coat jack russell terrier",
+    "dachshund with a smooth red coat",
+    "siberian husky with a grey and white coat and blue eyes",
+    "cavalier king charles spaniel with a chestnut and white coat",
+]
+JACK_RUSSELL_BREED = "small white and tan smooth-coat jack russell terrier"
+
 VIDEO_W, VIDEO_H = 1080, 1920
 FPS = 30
 TARGET_SECONDS = 55  # ciljna duljina naracije (Shorts limit je 3 min, sweet spot <60 s)
@@ -179,7 +198,16 @@ def get_next_post(env, state, wanted_slug=None):
 # Lumenta — video skripta iz članka
 # ---------------------------------------------------------------------------
 
-def call_lumenta_script(post_title, article_text, env, dry_run):
+def pick_breed(post_title, slug, state):
+    """JRT hub postovi uvijek dobivaju JRT maskotu (konzistentno s blogom);
+    ostali rotiraju kroz VIDEO_BREEDS po broju dosad obrađenih videa."""
+    haystack = f"{post_title} {slug}".lower()
+    if "jack russell" in haystack or "jack-russell" in haystack:
+        return JACK_RUSSELL_BREED
+    return VIDEO_BREEDS[len(state) % len(VIDEO_BREEDS)]
+
+
+def call_lumenta_script(post_title, article_text, breed, env, dry_run):
     """Skripta za Short: segments[] gdje je prvi hook a zadnji CTA, svaki sa
     svojim image_promptom. NAPOMENA: tool 'short_video_script' mora postojati
     na Lumenta internom endpointu (isti auth kao seo_blog_post)."""
@@ -210,6 +238,7 @@ def call_lumenta_script(post_title, article_text, env, dry_run):
                 "target_seconds": TARGET_SECONDS,
                 "audience": "dog owners, global, English-speaking",
                 "language": "en",
+                "breed": breed,
             },
         }).encode()
         headers = {
@@ -621,7 +650,9 @@ def main():
 
     try:
         article_text = strip_html(post["content"]["rendered"])
-        script = call_lumenta_script(post_title, article_text, env, args.dry_run)
+        breed = pick_breed(post_title, slug, state)
+        log(f"  pasmina za ovaj video: {breed}")
+        script = call_lumenta_script(post_title, article_text, breed, env, args.dry_run)
         segments = script["segments"]
         if not segments:
             raise RuntimeError("Lumenta skripta nema segmenata.")
