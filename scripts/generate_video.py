@@ -399,11 +399,15 @@ def allocate_durations(segments, total):
 
 def render_segment(image_name, duration, out_name, workdir, env):
     frames = max(int(round(duration * FPS)), FPS)
-    # Pre-scale na 2x prije zoompana — zoompan na malom inputu vidljivo trza.
+    # Anti-jitter kombinacija: zoom kao linearna funkcija framea ('1+k*on'
+    # umjesto 'zoom+k' — akumulacija sa zaokruživanjem po frameu vidljivo
+    # trese sliku) + zoompan renderiran u 2x rezoluciji pa downscale, da se
+    # subpixel greška ispegla.
     vf = (f"scale={VIDEO_W * 2}:{VIDEO_H * 2},"
-          f"zoompan=z='min(zoom+0.0008,1.20)'"
+          f"zoompan=z='min(1+0.0008*on,1.20)'"
           f":x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
-          f":d={frames}:s={VIDEO_W}x{VIDEO_H}:fps={FPS}")
+          f":d={frames}:s={VIDEO_W * 2}x{VIDEO_H * 2}:fps={FPS},"
+          f"scale={VIDEO_W}:{VIDEO_H}")
     run_cmd([env.get("FFMPEG_BIN") or "ffmpeg", "-y", "-i", image_name,
              "-vf", vf, "-frames:v", frames,
              "-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p",
