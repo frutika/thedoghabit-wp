@@ -726,9 +726,12 @@ def main():
         "created": time.strftime("%Y-%m-%d %H:%M:%S"),
     })
     save_state(state)
-    send_alert(f"Video spreman: '{post_title}' → {final_path.name}"
-               + (f" (YT: https://youtu.be/{youtube_id})" if youtube_id else " (čeka ručni upload)"),
-               env)
+    alert = (f"Video spreman: '{post_title}'"
+             + (f"\nYT: https://youtu.be/{youtube_id}" if youtube_id else
+                f" → {final_path.name} (čeka ručni upload)"))
+    if meta.get("pinned_comment"):
+        alert += f"\n\n\U0001F4CC Prijedlog pina:\n{meta['pinned_comment']}"
+    send_alert(alert, env)
     log("State ažuriran u videos.json.")
 
 
