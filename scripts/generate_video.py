@@ -693,6 +693,9 @@ def main():
             "yt_title": script["yt_title"],
             "yt_description": description,
             "yt_tags": script.get("yt_tags") or [],
+            # Prijedlog prikvačenog komentara — YT API ne podržava pin,
+            # pa ide u sidecar za ručni copy-paste pri objavi.
+            "pinned_comment": script.get("pinned_comment") or "",
             "video": final_path.name,
         }
         (workdir / f"{slug}.json").write_text(
