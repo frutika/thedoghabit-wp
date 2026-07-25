@@ -24,7 +24,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 ENV_PATH = PROJECT_DIR / ".env"
@@ -350,9 +350,105 @@ def upload_media(image_bytes, filename, content_type, env):
         headers["Content-Disposition"] = f'attachment; filename="{filename}"'
         status, body = http_request("POST", f"{env['WP_URL']}/wp-json/wp/v2/media",
                                      headers=headers, data=image_bytes)
-        return json.loads(body)["id"]
+        data = json.loads(body)
+        return data["id"], data["source_url"]
 
     return retry(do_upload, what="WP media upload")
+
+
+# Pinterest jako favorizira vertikalne (2:3) pinove s tekstom preko slike —
+# 16:9 featured slika tamo dobije djelić prikaza. Iz iste Leonardo slike
+# generiramo zaseban vertikalni pin (blog/IG i dalje koriste 16:9 featured).
+PIN_WIDTH = 1000
+PIN_HEIGHT = 1500
+PIN_RATIO = PIN_WIDTH / PIN_HEIGHT  # 0.667
+
+# Prvi postojeći font s liste; PIN_FONT env override ima prednost. DejaVu/
+# Liberation su standardno na Debianu (VPS host). Fallback na bitmap default
+# (ružan, ali nikad ne ruši pipeline).
+FONT_CANDIDATES = [
+    os.environ.get("PIN_FONT", ""),
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+    "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+]
+
+
+def _load_font(size):
+    for path in FONT_CANDIDATES:
+        if path and os.path.exists(path):
+            try:
+                return ImageFont.truetype(path, size)
+            except OSError:
+                continue
+    return ImageFont.load_default()
+
+
+def _wrap_text(draw, text, font, max_width):
+    lines, cur = [], ""
+    for word in text.split():
+        trial = f"{cur} {word}".strip()
+        if draw.textlength(trial, font=font) <= max_width or not cur:
+            cur = trial
+        else:
+            lines.append(cur)
+            cur = word
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+def make_pin_image(image_bytes, title):
+    """Vertikalna 2:3 (1000x1500) Pinterest pin-slika iz izvorne slike, s
+    naslovom preko tamnog gradijenta u donjem dijelu (čitljivost + CTR)."""
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    width, height = img.size
+    ratio = width / height
+
+    if ratio > PIN_RATIO:
+        new_width = round(height * PIN_RATIO)
+        left = (width - new_width) // 2
+        img = img.crop((left, 0, left + new_width, height))
+    elif ratio < PIN_RATIO:
+        new_height = round(width / PIN_RATIO)
+        top = (height - new_height) // 2
+        img = img.crop((0, top, width, top + new_height))
+    img = img.resize((PIN_WIDTH, PIN_HEIGHT), Image.LANCZOS)
+
+    draw = ImageDraw.Draw(img, "RGBA")
+
+    # Tamni gradijent preko donjih ~42% za čitljivost teksta bez obzira na sliku.
+    band_top = int(PIN_HEIGHT * 0.58)
+    for y in range(band_top, PIN_HEIGHT):
+        alpha = int(225 * (y - band_top) / (PIN_HEIGHT - band_top))
+        draw.line([(0, y), (PIN_WIDTH, y)], fill=(0, 0, 0, alpha))
+
+    margin = 70
+    max_text_w = PIN_WIDTH - 2 * margin
+    font_size = 70
+    font = _load_font(font_size)
+    lines = _wrap_text(draw, title, font, max_text_w)
+    while len(lines) > 4 and font_size > 44:
+        font_size -= 6
+        font = _load_font(font_size)
+        lines = _wrap_text(draw, title, font, max_text_w)
+
+    line_h = font.getbbox("Ag")[3] + 16
+    brand_gap = 70
+    y = PIN_HEIGHT - margin - brand_gap - line_h * len(lines)
+    for line in lines:
+        # tanka sjena za kontrast na svijetlim slikama
+        draw.text((margin + 2, y + 2), line, font=font, fill=(0, 0, 0, 160))
+        draw.text((margin, y), line, font=font, fill=(255, 255, 255, 255))
+        y += line_h
+
+    draw.text((margin, PIN_HEIGHT - margin - 42), "THEDOGHABIT.COM",
+              font=_load_font(34), fill=(255, 209, 92, 255))
+
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=88)
+    return buf.getvalue(), "image/jpeg"
 
 
 def get_categories(env):
@@ -523,12 +619,23 @@ def main():
                 log("Tema označena kao 'done' u topics.json (post već postoji).")
             sys.exit(0)
 
-        image_bytes, content_type = call_leonardo(article["title"], env, args.dry_run, tags=topic.get("tags"))
-        image_bytes, content_type = process_image(image_bytes)
+        raw_image_bytes, content_type = call_leonardo(article["title"], env, args.dry_run, tags=topic.get("tags"))
+        image_bytes, content_type = process_image(raw_image_bytes)
         log(f"  slika obrađena: {len(image_bytes)} bajtova, {content_type}")
         ext = mimetypes.guess_extension(content_type) or ".jpg"
-        media_id = upload_media(image_bytes, f"{slug}{ext}", content_type, env)
+        media_id, _ = upload_media(image_bytes, f"{slug}{ext}", content_type, env)
         log(f"  slika uploadana, media_id={media_id}")
+
+        # Vertikalna pin-slika za Pinterest (feed je izloži u <media:content>).
+        pin_url = None
+        try:
+            pin_bytes, pin_ct = make_pin_image(raw_image_bytes, article["title"])
+            pin_ext = mimetypes.guess_extension(pin_ct) or ".jpg"
+            _, pin_url = upload_media(pin_bytes, f"{slug}-pin{pin_ext}", pin_ct, env)
+            log(f"  pin-slika uploadana: {pin_url}")
+        except Exception as e:
+            # Pin-slika nije kritična — bez nje Pinterest fallbacka na featured.
+            log(f"  pin-slika preskočena (nije kritično): {e}")
 
         categories = get_categories(env)
         category_id = categories.get(topic["category"])
@@ -553,6 +660,8 @@ def main():
             "rank_math_focus_keyword": keywords[0] if keywords else "",
             "thedoghabit_faq": json.dumps(article.get("faq") or [], ensure_ascii=False),
         }
+        if pin_url:
+            meta["thedoghabit_pin_image"] = pin_url
 
         # Gear postovi dobivaju "Recommended Gear" affiliate sekciju — renderira
         # je mu-plugin thedoghabit-affiliate.php iz ovog meta polja.

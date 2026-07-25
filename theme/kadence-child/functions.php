@@ -206,6 +206,7 @@ add_action( 'rss2_item', function () {
 	$mime_type    = get_post_mime_type( $thumbnail_id );
 	$image_meta   = wp_get_attachment_image_src( $thumbnail_id, 'large' );
 
+	// Featured (16:9) ide u <enclosure> — Instagram grana u Make-u koristi ovo polje.
 	printf(
 		'<enclosure url="%s" length="%d" type="%s" />' . "\n",
 		esc_url( $image_url ),
@@ -213,11 +214,22 @@ add_action( 'rss2_item', function () {
 		esc_attr( $mime_type )
 	);
 
-	printf(
-		'<media:content url="%s" type="%s" medium="image" width="%d" height="%d" />' . "\n",
-		esc_url( $image_url ),
-		esc_attr( $mime_type ),
-		$image_meta ? (int) $image_meta[1] : 0,
-		$image_meta ? (int) $image_meta[2] : 0
-	);
+	// Pinterest voli vertikalne slike: ako postoji dedicirana pin-slika
+	// (thedoghabit_pin_image, 2:3 s tekstom), izloži NJU u <media:content>
+	// (Make je mapira u "Image" polje). Inače fallback na featured (16:9).
+	$pin_url = get_post_meta( get_the_ID(), 'thedoghabit_pin_image', true );
+	if ( $pin_url ) {
+		printf(
+			'<media:content url="%s" type="image/jpeg" medium="image" width="1000" height="1500" />' . "\n",
+			esc_url( $pin_url )
+		);
+	} else {
+		printf(
+			'<media:content url="%s" type="%s" medium="image" width="%d" height="%d" />' . "\n",
+			esc_url( $image_url ),
+			esc_attr( $mime_type ),
+			$image_meta ? (int) $image_meta[1] : 0,
+			$image_meta ? (int) $image_meta[2] : 0
+		);
+	}
 } );

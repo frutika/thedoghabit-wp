@@ -24,6 +24,16 @@ add_action('init', function () {
         ]);
     }
 
+    // URL vertikalne Pinterest pin-slike (generate_post.py je uploada zasebno);
+    // RSS feed je izloži u <media:content> za Make Pinterest granu.
+    register_post_meta('post', 'thedoghabit_pin_image', [
+        'show_in_rest'      => true,
+        'single'            => true,
+        'type'              => 'string',
+        'sanitize_callback' => 'esc_url_raw',
+        'auth_callback'     => $auth,
+    ]);
+
     // JSON string: [{"question": "...", "answer": "..."}, ...]
     register_post_meta('post', 'thedoghabit_faq', [
         'show_in_rest'      => true,
