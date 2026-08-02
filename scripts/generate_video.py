@@ -172,26 +172,50 @@ def strip_html(html_text, limit=6000):
 
 
 def get_next_post(env, state, wanted_slug=None):
-    """Najstariji objavljeni post bez videa (ili točno određeni preko
-    --post-slug). Najstariji prvo, da se backlog videa puni istim redom
-    kojim je blog rastao."""
+    # Bez --post-slug: strateska selekcija (ne cisti FIFO). Prioritet po vidIQ
+    # podacima: 2=sleep cluster (zlatni keyword), 1=behavior-problem (dokazani
+    # pobjednici), 0=ostatak backloga. Unutar strateskih tiera najnoviji prvo
+    # (svjez sadrzaj van odmah); backlog se drenira najstariji prvo. Parkirani
+    # postovi (videos.json status parked) ispadaju kroz done_slugs.
     done_slugs = {v["slug"] for v in state}
 
     def do_call():
-        url = (f"{env['WP_URL']}/wp-json/wp/v2/posts?per_page=100&orderby=date&order=asc"
+        base = env["WP_URL"]
+        url = (base + "/wp-json/wp/v2/posts?per_page=100&orderby=date&order=asc"
                "&_fields=id,slug,link,title,content,excerpt")
         status, body = http_request("GET", url)
         return json.loads(body)
 
     posts = retry(do_call, what="WP posts fetch")
-    for p in posts:
-        if wanted_slug:
-            if p["slug"] == wanted_slug:
-                return p
-            continue
-        if p["slug"] not in done_slugs:
-            return p
-    return None
+
+    if wanted_slug:
+        return next((p for p in posts if p["slug"] == wanted_slug), None)
+
+    undone = [p for p in posts if p["slug"] not in done_slugs]
+    if not undone:
+        return None
+
+    top = max(_post_priority(p) for p in undone)
+    if top > 0:
+        return [p for p in undone if _post_priority(p) == top][-1]
+    return undone[0]
+
+
+_SLEEP_KW = ("sleep",)
+_PROBLEM_KW = ("anxiety", "separation", "biting", "nipping", "barking", "aggress",
+               "chewing", "digging", "jumping", "whining", "licking", "guarding",
+               "counter", "pulling", "not listening", "reactive", "panic", "destructive")
+
+
+def _post_priority(post):
+    text = (post.get("slug", "") + " " + post.get("title", {}).get("rendered", "")).lower()
+    if any(k in text for k in _SLEEP_KW):
+        return 2
+    if (any(k in text for k in _PROBLEM_KW)
+            or "why does my dog" in text or "why is my dog" in text
+            or "how to stop" in text):
+        return 1
+    return 0
 
 
 # ---------------------------------------------------------------------------
