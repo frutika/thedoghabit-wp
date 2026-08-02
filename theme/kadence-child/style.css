@@ -539,3 +539,18 @@ body.tdh-cc-modal-open {
 		grid-template-columns: 1fr;
 	}
 }
+
+/* Newsletter: honeypot (skriven od ljudi, boti ga popune) + error poruka */
+.tdh-hp {
+	position: absolute;
+	left: -9999px;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+.tdh-newsletter-error {
+	margin-top: 0.75rem;
+	color: #c0392b;
+	font-size: 0.95rem;
+}

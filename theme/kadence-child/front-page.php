@@ -53,11 +53,13 @@ $tdh_blog_url       = get_permalink( get_option( 'page_for_posts' ) ) ?: home_ur
 		<div class="tdh-newsletter-inner">
 			<h2 class="tdh-section-title">Get new guides in your inbox</h2>
 			<p class="tdh-newsletter-sub">Practical dog training and behavior tips, about once a week. No spam.</p>
-			<form class="tdh-newsletter-form">
+			<form class="tdh-newsletter-form" action="<?php echo esc_url( rest_url( 'thedoghabit/v1/subscribe' ) ); ?>" method="post">
 				<input type="email" name="email" class="tdh-newsletter-input" placeholder="you@example.com" required />
+				<input type="text" name="website" class="tdh-hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
 				<button type="submit" class="tdh-pill-button">Subscribe</button>
 			</form>
 			<p class="tdh-newsletter-note" hidden>Thanks! We'll be in touch soon.</p>
+			<p class="tdh-newsletter-error" role="alert" hidden>Hmm, that didn't work — check your email and try again.</p>
 		</div>
 	</section>
 
@@ -110,11 +112,39 @@ $tdh_blog_url       = get_permalink( get_option( 'page_for_posts' ) ) ?: home_ur
 document.addEventListener('DOMContentLoaded', function () {
 	var form = document.querySelector('.tdh-newsletter-form');
 	if (!form) return;
+	var note = document.querySelector('.tdh-newsletter-note');
+	var errNote = document.querySelector('.tdh-newsletter-error');
 	form.addEventListener('submit', function (e) {
 		e.preventDefault();
-		form.hidden = true;
-		var note = document.querySelector('.tdh-newsletter-note');
-		if (note) note.hidden = false;
+		var emailInput = form.querySelector('input[type="email"]');
+		var honeypot = form.querySelector('input[name="website"]');
+		var btn = form.querySelector('button[type="submit"]');
+		if (errNote) errNote.hidden = true;
+		if (btn) btn.disabled = true;
+		fetch(form.getAttribute('action'), {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				email: emailInput ? emailInput.value : '',
+				website: honeypot ? honeypot.value : ''
+			})
+		}).then(function (r) {
+			return r.json().catch(function () { return {}; });
+		}).then(function (data) {
+			if (data && data.ok) {
+				form.hidden = true;
+				if (note) note.hidden = false;
+			} else {
+				if (btn) btn.disabled = false;
+				if (errNote) {
+					errNote.textContent = (data && data.error) ? data.error : errNote.textContent;
+					errNote.hidden = false;
+				}
+			}
+		}).catch(function () {
+			if (btn) btn.disabled = false;
+			if (errNote) errNote.hidden = false;
+		});
 	});
 });
 </script>
