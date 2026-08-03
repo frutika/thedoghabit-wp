@@ -214,10 +214,29 @@ add_action( 'rss2_item', function () {
 		esc_attr( $mime_type )
 	);
 
-	// Pinterest voli vertikalne slike: ako postoji dedicirana pin-slika
-	// (thedoghabit_pin_image, 2:3 s tekstom), izloži NJU u <media:content>
-	// (Make je mapira u "Image" polje). Inače fallback na featured (16:9).
 	$pin_url = get_post_meta( get_the_ID(), 'thedoghabit_pin_image', true );
+
+	// DRUGI <enclosure> = vertikalna pin-slika (2:3) za Pinterest. Make RSS modul
+	// parsira enclosure-e u niz, pa Pinterest grana mapira Enclosures[2], a
+	// Instagram ostaje na Enclosures[1] (featured 16:9).
+	//
+	// Fallback na featured je namjeran: polje MORA uvijek biti popunjeno. Kad je
+	// Pinterest jednom dobio prazan URL (media:content mapiranje), Make je pao na
+	// validaciji i sam DEAKTIVIRAO cijeli scenarij (25.7.2026.).
+	$pin_enclosure_url = $pin_url ?: $image_url;
+	$pin_attachment_id = $pin_url ? attachment_url_to_postid( $pin_url ) : $thumbnail_id;
+	$pin_path          = $pin_attachment_id ? get_attached_file( $pin_attachment_id ) : '';
+	$pin_size          = $pin_path && file_exists( $pin_path ) ? filesize( $pin_path ) : 0;
+
+	printf(
+		'<enclosure url="%s" length="%d" type="image/jpeg" />' . "\n",
+		esc_url( $pin_enclosure_url ),
+		(int) $pin_size
+	);
+
+	// Pinterest voli vertikalne slike: ako postoji dedicirana pin-slika
+	// (thedoghabit_pin_image, 2:3 s tekstom), izloži NJU i u <media:content>.
+	// Inače fallback na featured (16:9).
 	if ( $pin_url ) {
 		printf(
 			'<media:content url="%s" type="image/jpeg" medium="image" width="1000" height="1500" />' . "\n",
