@@ -2,14 +2,14 @@
 """generate_post.py — thedoghabit.com cron skripta (spec §3-4).
 
 Uzima prvu 'pending' temu iz topics.json, generira članak preko Lumenta
-internog endpointa (§4), featured sliku preko Leonardo API-ja, i objavljuje
+internog endpointa (§4), featured sliku preko Pexels API-ja, i objavljuje
 na WordPress preko REST API-ja. HTTP pozivi idu preko urllib-a (stdlib);
 jedina vanjska ovisnost je Pillow, za normalizaciju featured slike prije
 uploada (već instaliran na hostu).
 
 Post ide kao "draft" po defaultu; --publish ga objavljuje odmah (cron
 koristi --publish nakon što je kvaliteta ručno potvrđena). --dry-run
-zaobilazi Lumenta i Leonardo pozive mock/placeholder podacima, za
+zaobilazi Lumenta i Pexels pozive mock/placeholder podacima, za
 testiranje cijelog tijeka bez API ključeva.
 """
 import argparse
@@ -21,6 +21,7 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -41,16 +42,9 @@ CATEGORY_NAMES = {
     "puppies": "Puppy Basics",
 }
 
-# Konzistentan izgled "maskote" psa za breed-specifičan sadržaj (npr. JRT hub) —
-# isti opis se koristi za hero sliku (ručno) i ovdje za post slike, po tag-u.
-BREED_DOG_DESCRIPTIONS = {
-    "jack-russell": (
-        "white and tan smooth-coat Jack Russell Terrier, looking at camera, "
-        "soft natural light, photorealistic, warm tones"
-    ),
-}
-
-LEONARDO_STYLE_ID = "111dc692-d470-4eec-b791-3475abac4c46"
+# Breed-specifičan sadržaj (npr. JRT hub) traži Pexels sliku te pasmine
+# umjesto generičkog "dog" upita.
+BREED_TAGS = {"jack-russell"}
 
 
 def log(msg):
@@ -91,8 +85,6 @@ DEFAULT_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) thedoghabit-generate-post/
 
 
 def http_request(method, url, headers=None, data=None, timeout=30):
-    # Leonardo (Cloudflare-fronted) vraća 403/error 1010 na urllib-ov default
-    # "Python-urllib/x.y" User-Agent — bot-zaštita ga prepoznaje i blokira.
     merged_headers = {"User-Agent": DEFAULT_USER_AGENT, **(headers or {})}
     req = urllib.request.Request(url, data=data, headers=merged_headers, method=method)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -181,60 +173,38 @@ def call_lumenta(topic, env, dry_run):
     return retry(do_call, attempts=4, base_delay=45, what="Lumenta generate")
 
 
-def call_leonardo(title, env, dry_run, tags=None):
-    if dry_run:
-        log("  [dry-run] koristim placeholder sliku umjesto Leonardo API-ja")
-        return PLACEHOLDER_IMAGE.read_bytes(), "image/jpeg"
+def call_pexels_image(query, env, orientation="landscape"):
+    """Besplatan Pexels API, bez strogog rate limita — stock foto po upitu."""
+    api_key = env.get("PEXELS_API_KEY")
+    if not api_key:
+        raise RuntimeError("PEXELS_API_KEY nije postavljen u .env.")
 
     def do_call():
-        # Leonardo generacija je asinkrona: POST vraća generationId, GET se polla
-        # dok status ne postane COMPLETE (obično par sekundi).
-        breed_description = next(
-            (BREED_DOG_DESCRIPTIONS[t] for t in (tags or []) if t in BREED_DOG_DESCRIPTIONS),
-            None,
-        )
-        if breed_description:
-            prompt = (f"{breed_description}, context: {title}. "
-                      "Natural lighting, no text, no watermark.")
-        else:
-            prompt = (f"Photorealistic photo of a dog, context: {title}. "
-                      "Natural lighting, no text, no watermark.")
-        headers = {
-            "Authorization": f"Bearer {env['LEONARDO_API_KEY']}",
-            "Content-Type": "application/json",
-        }
-        payload = json.dumps({
-            "model": "lucid-origin",
-            "public": True,
-            "parameters": {
-                "prompt": prompt,
-                "quantity": 1,
-                "width": 1024,
-                "height": 768,
-                "prompt_enhance": "OFF",
-                "style_ids": [LEONARDO_STYLE_ID],
-            },
-        }).encode()
-        # v2 create + v1 poll: status/rezultat live pod istim v1 GET-om bez obzira
-        # koja verzija je generaciju kreirala (potvrđeno ručnim testom 2026-07-15).
-        _, body = http_request("POST", "https://cloud.leonardo.ai/api/rest/v2/generations",
-                                headers=headers, data=payload)
-        generation_id = json.loads(body)["generate"]["generationId"]
+        params = urllib.parse.urlencode({"query": query, "per_page": 1, "orientation": orientation})
+        _, body = http_request("GET", f"https://api.pexels.com/v1/search?{params}",
+                               headers={"Authorization": api_key})
+        photos = json.loads(body).get("photos") or []
+        if not photos:
+            raise RuntimeError(f"Pexels nije vratio nijednu fotografiju za upit '{query}'.")
+        _, img_bytes = http_request("GET", photos[0]["src"]["large2x"])
+        return img_bytes
 
-        status_url = f"https://cloud.leonardo.ai/api/rest/v1/generations/{generation_id}"
-        for _ in range(30):
-            time.sleep(4)
-            _, poll_body = http_request("GET", status_url, headers=headers)
-            record = json.loads(poll_body)["generations_by_pk"]
-            if record["status"] == "COMPLETE":
-                image_url = record["generated_images"][0]["url"]
-                _, img_bytes = http_request("GET", image_url)
-                return img_bytes, "image/jpeg"
-            if record["status"] == "FAILED":
-                raise RuntimeError(f"Leonardo generacija {generation_id} je FAILED")
-        raise RuntimeError(f"Leonardo generacija {generation_id} nije završila na vrijeme")
+    return retry(do_call, what=f"Pexels image search ('{query}')")
 
-    return retry(do_call, what="Leonardo image generation")
+
+def _pexels_query_for_post(tags):
+    breed_key = next((t for t in (tags or []) if t in BREED_TAGS), None)
+    if breed_key:
+        return breed_key.replace("-", " ") + " dog"
+    return "dog"
+
+
+def fetch_featured_image(title, env, dry_run, tags=None):
+    if dry_run:
+        log("  [dry-run] koristim placeholder sliku umjesto Pexels API-ja")
+        return PLACEHOLDER_IMAGE.read_bytes(), "image/jpeg"
+    query = _pexels_query_for_post(tags)
+    return call_pexels_image(query, env, orientation="landscape"), "image/jpeg"
 
 
 REFILL_THRESHOLD = 10
@@ -312,7 +282,7 @@ IMAGE_MAX_BYTES = 8 * 1024 * 1024
 
 def process_image(image_bytes):
     """Normalizira featured sliku prije uploada: JPEG q85, 1280px širina,
-    16:9 (center-crop na omjer pa resize). Leonardo/placeholder slike dolaze
+    16:9 (center-crop na omjer pa resize). Pexels/placeholder slike dolaze
     u različitim omjerima i formatima (npr. hero je bio 1344x768) — ovo
     garantira dosljedan izlaz bez obzira na izvor."""
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
@@ -357,7 +327,7 @@ def upload_media(image_bytes, filename, content_type, env):
 
 
 # Pinterest jako favorizira vertikalne (2:3) pinove s tekstom preko slike —
-# 16:9 featured slika tamo dobije djelić prikaza. Iz iste Leonardo slike
+# 16:9 featured slika tamo dobije djelić prikaza. Iz iste Pexels slike
 # generiramo zaseban vertikalni pin (blog/IG i dalje koriste 16:9 featured).
 PIN_WIDTH = 1000
 PIN_HEIGHT = 1500
@@ -577,7 +547,7 @@ def create_post(title, slug, content, excerpt, category_id, media_id, status, en
 def main():
     parser = argparse.ArgumentParser(description="Generiraj i objavi jedan post na thedoghabit.com")
     parser.add_argument("--dry-run", action="store_true",
-                         help="mock Lumenta/Leonardo odgovori, uvijek draft, bez pravih API poziva")
+                         help="mock Lumenta/Pexels odgovori, uvijek draft, bez pravih API poziva")
     parser.add_argument("--publish", action="store_true",
                          help="objavi kao 'publish' umjesto 'draft' (ignorira se u --dry-run)")
     args = parser.parse_args()
@@ -619,7 +589,7 @@ def main():
                 log("Tema označena kao 'done' u topics.json (post već postoji).")
             sys.exit(0)
 
-        raw_image_bytes, content_type = call_leonardo(article["title"], env, args.dry_run, tags=topic.get("tags"))
+        raw_image_bytes, content_type = fetch_featured_image(article["title"], env, args.dry_run, tags=topic.get("tags"))
         image_bytes, content_type = process_image(raw_image_bytes)
         log(f"  slika obrađena: {len(image_bytes)} bajtova, {content_type}")
         ext = mimetypes.guess_extension(content_type) or ".jpg"

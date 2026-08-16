@@ -5,7 +5,7 @@ Uzima najstariji objavljeni WP post koji još nema video (state u videos.json),
 generira kratku video skriptu preko Lumenta internog endpointa (tool
 'short_video_script' — mora postojati na Lumenta strani), voiceover preko
 edge-tts (besplatan, bez API ključa; word timestampovi iz istog poziva postaju
-titlovi), vertikalne slike preko Leonardo API-ja, i montira 9:16 MP4 (1080x1920,
+titlovi), vertikalne slike preko Pexels API-ja, i montira 9:16 MP4 (1080x1920,
 Ken Burns zoom + hardcoded titlovi) preko ffmpeg-a.
 
 Rezultat: videos/<slug>/<slug>.mp4 + <slug>.json (YT naslov/opis/tagovi za
@@ -47,8 +47,6 @@ STATE_PATH = PROJECT_DIR / "videos.json"
 OUTPUT_DIR = PROJECT_DIR / "videos"
 PLACEHOLDER_IMAGE = PROJECT_DIR / "assets" / "placeholder-dog.jpg"
 LOG_PATH = PROJECT_DIR / "logs" / "generate_video.log"
-
-LEONARDO_STYLE_ID = "111dc692-d470-4eec-b791-3475abac4c46"
 
 # Rotacija pasmina: jedan video = jedna pasmina (konzistentna kroz sve kadrove),
 # sljedeći video sljedeća pasmina — redoslijed određuje broj već obrađenih
@@ -369,55 +367,37 @@ def build_ass(words, path):
 
 
 # ---------------------------------------------------------------------------
-# Leonardo — vertikalne slike po segmentu
+# Pexels — vertikalne slike po segmentu
 # ---------------------------------------------------------------------------
 
-def call_leonardo_image(prompt, env, dry_run):
-    if dry_run:
-        log("  [dry-run] koristim placeholder sliku umjesto Leonardo API-ja")
-        return PLACEHOLDER_IMAGE.read_bytes()
+def call_pexels_image(query, env, orientation="landscape"):
+    """Besplatan Pexels API, bez strogog rate limita — stock foto po upitu."""
+    api_key = env.get("PEXELS_API_KEY")
+    if not api_key:
+        raise RuntimeError("PEXELS_API_KEY nije postavljen u .env.")
 
     def do_call():
-        headers = {
-            "Authorization": f"Bearer {env['LEONARDO_API_KEY']}",
-            "Content-Type": "application/json",
-        }
-        payload = json.dumps({
-            "model": "lucid-origin",
-            "public": True,
-            "parameters": {
-                "prompt": (f"{prompt}, photorealistic, natural lighting, "
-                           "vertical composition, no text, no watermark"),
-                "quantity": 1,
-                "width": 768,
-                "height": 1344,
-                "prompt_enhance": "OFF",
-                "style_ids": [LEONARDO_STYLE_ID],
-            },
-        }).encode()
-        # v2 create + v1 poll — isti pattern kao generate_post.py.
-        _, body = http_request("POST", "https://cloud.leonardo.ai/api/rest/v2/generations",
-                                headers=headers, data=payload)
-        generation_id = json.loads(body)["generate"]["generationId"]
+        params = urllib.parse.urlencode({"query": query, "per_page": 1, "orientation": orientation})
+        _, body = http_request("GET", f"https://api.pexels.com/v1/search?{params}",
+                               headers={"Authorization": api_key})
+        photos = json.loads(body).get("photos") or []
+        if not photos:
+            raise RuntimeError(f"Pexels nije vratio nijednu fotografiju za upit '{query}'.")
+        _, img_bytes = http_request("GET", photos[0]["src"]["large2x"])
+        return img_bytes
 
-        status_url = f"https://cloud.leonardo.ai/api/rest/v1/generations/{generation_id}"
-        for _ in range(30):
-            time.sleep(4)
-            _, poll_body = http_request("GET", status_url, headers=headers)
-            record = json.loads(poll_body)["generations_by_pk"]
-            if record["status"] == "COMPLETE":
-                image_url = record["generated_images"][0]["url"]
-                _, img_bytes = http_request("GET", image_url)
-                return img_bytes
-            if record["status"] == "FAILED":
-                raise RuntimeError(f"Leonardo generacija {generation_id} je FAILED")
-        raise RuntimeError(f"Leonardo generacija {generation_id} nije završila na vrijeme")
+    return retry(do_call, what=f"Pexels image search ('{query}')")
 
-    return retry(do_call, what="Leonardo image generation")
+
+def fetch_segment_image(prompt, env, dry_run):
+    if dry_run:
+        log("  [dry-run] koristim placeholder sliku umjesto Pexels API-ja")
+        return PLACEHOLDER_IMAGE.read_bytes()
+    return call_pexels_image(prompt, env, orientation="portrait")
 
 
 def process_image_vertical(image_bytes):
-    """Center-crop na 9:16 pa resize na 1080x1920 — Leonardo i placeholder
+    """Center-crop na 9:16 pa resize na 1080x1920 — Pexels i placeholder
     dolaze u raznim omjerima, ffmpeg-u treba konzistentan input."""
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     width, height = img.size
@@ -696,7 +676,7 @@ def main():
         segment_names = []
         durations = allocate_durations(segments, total_audio + 0.5)
         for i, (seg, dur) in enumerate(zip(segments, durations)):
-            img_bytes = call_leonardo_image(seg["image_prompt"], env, args.dry_run)
+            img_bytes = fetch_segment_image(seg["image_prompt"], env, args.dry_run)
             img_name = f"img_{i}.jpg"
             (workdir / img_name).write_bytes(process_image_vertical(img_bytes))
             seg_name = f"seg_{i}.mp4"
