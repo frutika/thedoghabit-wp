@@ -18,6 +18,7 @@ import io
 import json
 import mimetypes
 import os
+import random
 import sys
 import time
 import urllib.error
@@ -174,36 +175,69 @@ def call_lumenta(topic, env, dry_run):
 
 
 def call_pexels_image(query, env, orientation="landscape"):
-    """Besplatan Pexels API, bez strogog rate limita — stock foto po upitu."""
+    """Besplatan Pexels API, bez strogog rate limita — stock foto po upitu.
+
+    per_page=10 + nasumičan odabir umjesto uvijek prvog rezultata: Pexels
+    vraća DETERMINISTIČKI isti top rezultat za isti upit svaki put, pa bi
+    per_page=1 značio da svi postovi s istim (ili sličnim) upitom dijele
+    identičnu sliku — otkriveno 2026-08-17, tri zaredom objavljena posta
+    bez breed taga imala su bit-identičnu featured sliku jer je upit uvijek
+    bio doslovno "dog".
+    """
     api_key = env.get("PEXELS_API_KEY")
     if not api_key:
         raise RuntimeError("PEXELS_API_KEY nije postavljen u .env.")
 
     def do_call():
-        params = urllib.parse.urlencode({"query": query, "per_page": 1, "orientation": orientation})
+        params = urllib.parse.urlencode({"query": query, "per_page": 10, "orientation": orientation})
         _, body = http_request("GET", f"https://api.pexels.com/v1/search?{params}",
                                headers={"Authorization": api_key})
         photos = json.loads(body).get("photos") or []
         if not photos:
             raise RuntimeError(f"Pexels nije vratio nijednu fotografiju za upit '{query}'.")
-        _, img_bytes = http_request("GET", photos[0]["src"]["large2x"])
+        photo = random.choice(photos)
+        _, img_bytes = http_request("GET", photo["src"]["large2x"])
         return img_bytes
 
     return retry(do_call, what=f"Pexels image search ('{query}')")
 
 
-def _pexels_query_for_post(tags):
+# Kategorija iz topics.json -> konkretniji Pexels upit (relevantnije slike
+# + prirodno različiti upiti po temi, umjesto da SVI netagirani postovi
+# dijele isti generički "dog" upit).
+CATEGORY_PEXELS_QUERY = {
+    "training": "dog training",
+    "behavior": "dog behavior",
+    "gear": "dog gear accessories",
+    "habits": "dog daily life",
+    "puppies": "puppy",
+}
+
+
+def _pexels_query_for_post(tags, topic=None):
     breed_key = next((t for t in (tags or []) if t in BREED_TAGS), None)
     if breed_key:
         return breed_key.replace("-", " ") + " dog"
+
+    category = (topic or {}).get("category")
+    if category in CATEGORY_PEXELS_QUERY:
+        return CATEGORY_PEXELS_QUERY[category]
+
+    keywords = (topic or {}).get("keywords") or []
+    if keywords:
+        # Prvih par riječi prve ključne fraze (npr. "why does my dog sleep at
+        # my feet" -> "why does my dog") - Pexels traži foto-opisne pojmove,
+        # ne pune long-tail SEO fraze, koje često vrate 0 rezultata.
+        return " ".join(keywords[0].split()[:4])
+
     return "dog"
 
 
-def fetch_featured_image(title, env, dry_run, tags=None):
+def fetch_featured_image(title, env, dry_run, tags=None, topic=None):
     if dry_run:
         log("  [dry-run] koristim placeholder sliku umjesto Pexels API-ja")
         return PLACEHOLDER_IMAGE.read_bytes(), "image/jpeg"
-    query = _pexels_query_for_post(tags)
+    query = _pexels_query_for_post(tags, topic)
     return call_pexels_image(query, env, orientation="landscape"), "image/jpeg"
 
 
@@ -589,7 +623,7 @@ def main():
                 log("Tema označena kao 'done' u topics.json (post već postoji).")
             sys.exit(0)
 
-        raw_image_bytes, content_type = fetch_featured_image(article["title"], env, args.dry_run, tags=topic.get("tags"))
+        raw_image_bytes, content_type = fetch_featured_image(article["title"], env, args.dry_run, tags=topic.get("tags"), topic=topic)
         image_bytes, content_type = process_image(raw_image_bytes)
         log(f"  slika obrađena: {len(image_bytes)} bajtova, {content_type}")
         ext = mimetypes.guess_extension(content_type) or ".jpg"
