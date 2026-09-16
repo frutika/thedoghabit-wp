@@ -66,12 +66,20 @@ def load_env(path):
 
 
 def send_telegram(msg, env):
-    """Best-effort Telegram alert — isti obrazac kao generate_video.py's send_alert."""
+    """Šalje Telegram alert, vraća je li stvarno isporučen.
+
+    NIJE tiho best-effort: poziva se iz maybe_alert(), koji smije upisati
+    "alarm poslan" u alert-state (i time ušutkati sljedećih
+    RE_ALERT_AFTER_HOURS) SAMO ako je poruka stvarno otišla. Da ova
+    funkcija guta grešku bez povratne vrijednosti, watchdog bi na pokvaren
+    token/kanal trajno prešutio samog sebe — isti kvar zbog kojeg
+    postoji, samo sad proizveden vlastitim dedup mehanizmom.
+    """
     token = env.get("TELEGRAM_BOT_TOKEN")
     chat_id = env.get("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
         log("  Telegram nije konfiguriran (TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID) — alert preskočen.")
-        return
+        return False
     try:
         payload = json.dumps({"chat_id": chat_id, "text": f"[thedoghabit-video] {msg}"}).encode()
         req = urllib.request.Request(
@@ -79,8 +87,10 @@ def send_telegram(msg, env):
             data=payload, headers={"Content-Type": "application/json"}, method="POST",
         )
         urllib.request.urlopen(req, timeout=10)
+        return True
     except (urllib.error.URLError, urllib.error.HTTPError) as e:
         log(f"  Telegram alert nije poslan: {e}")
+        return False
 
 
 def last_successful_upload():
@@ -141,9 +151,11 @@ def maybe_alert(message, env):
     if last_alert is not None and (now - last_alert) < timedelta(hours=RE_ALERT_AFTER_HOURS):
         log(f"  Alarm bi trebao ići, ali zadnji je poslan prije {(now - last_alert).total_seconds() / 3600:.1f}h — preskačem (re-alert tek nakon {RE_ALERT_AFTER_HOURS}h).")
         return
-    send_telegram(message, env)
-    save_alert_state(now)
-    log("  Alarm poslan.")
+    if send_telegram(message, env):
+        save_alert_state(now)
+        log("  Alarm poslan.")
+    else:
+        log("  Alarm NIJE poslan — stanje nije spremljeno, idući pokušaj za 6h (sljedeći cron run), ne za 24h.")
 
 
 def main():
