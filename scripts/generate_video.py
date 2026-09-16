@@ -124,7 +124,20 @@ def retry(fn, attempts=3, base_delay=2, what=""):
             return fn()
         except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as e:
             last_err = e
-            detail = e.read().decode(errors="replace") if isinstance(e, urllib.error.HTTPError) else str(e)
+            if isinstance(e, urllib.error.HTTPError):
+                detail = e.read().decode(errors="replace")
+                # cf-ray identifies which Cloudflare rule fired — without it,
+                # a report to a provider's support has nothing to point at.
+                # Gated on cf-ray being present so non-Cloudflare hosts
+                # (Lumenta, YouTube, WP) don't get a noisy all-None suffix.
+                cf_ray = e.headers.get("cf-ray")
+                if cf_ray:
+                    detail += (
+                        f" [cf-ray={cf_ray} mitigated={e.headers.get('cf-mitigated')} "
+                        f"ratelimit={e.headers.get('x-ratelimit-remaining')}/{e.headers.get('x-ratelimit-limit')}]"
+                    )
+            else:
+                detail = str(e)
             log(f"  pokušaj {attempt}/{attempts} za '{what}' nije uspio: {detail}")
             if attempt < attempts:
                 time.sleep(base_delay * attempt)
