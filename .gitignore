@@ -1,5 +1,6 @@
 .env
 logs/
 videos/
+silence_alarm_state.json
 __pycache__/
 *.pyc

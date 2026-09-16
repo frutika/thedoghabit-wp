@@ -15,21 +15,33 @@ generate_video.py ikad postane potpuno neupotrebljiv (npr. syntax/import
 greška prije nego stigne do svog vlastitog send_alert poziva), ovaj i dalje
 radi jer ne ovisi o ijednoj njegovoj funkciji, samo o videos.json state
 fileu koji generate_video.py piše.
+
+POZNATO OGRANIČENJE, namjerno neriješeno ovdje: ovaj watchdog dijeli
+Telegram bot/kanal s onim što nadzire (isti send_alert obrazac), i sam je
+lokalni cron proces koji može tiho prestati raditi (reboot, cron nije
+reloadan, promijenjen python path, neuhvaćena iznimka) bez da to itko
+primijeti — uklj. slučaj kad je cijeli VPS mrtav, gdje nijedna lokalna
+skripta ništa ne može javiti. Pravo rješenje je vanjski dead man's switch
+(npr. healthchecks.io ping nakon svakog uspješnog uploada) koji sam
+nadzire odsutnost pinga, neovisno o ovom serveru i ovom Telegram kanalu.
+Ovaj skript je namjerno privremeni korak prema tome, ne zamjena za to.
 """
 import json
 import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 ENV_PATH = PROJECT_DIR / ".env"
 STATE_PATH = PROJECT_DIR / "videos.json"
+ALERT_STATE_PATH = PROJECT_DIR / "silence_alarm_state.json"
 LOG_PATH = PROJECT_DIR / "logs" / "check_video_silence.log"
 
 SILENCE_THRESHOLD_HOURS = 48
+RE_ALERT_AFTER_HOURS = 24  # nakon prvog alarma, ponovi tek dnevno dok traje
 
 
 def log(msg):
@@ -53,7 +65,7 @@ def load_env(path):
     return env
 
 
-def send_alert(msg, env):
+def send_telegram(msg, env):
     """Best-effort Telegram alert — isti obrazac kao generate_video.py's send_alert."""
     token = env.get("TELEGRAM_BOT_TOKEN")
     chat_id = env.get("TELEGRAM_CHAT_ID")
@@ -74,39 +86,90 @@ def send_alert(msg, env):
 def last_successful_upload():
     """Najnoviji videos.json zapis sa status=='uploaded', po 'created' polju.
 
-    Vraća None ako fajl ne postoji ili nema nijedan uploadan zapis (npr. na
-    posve novoj instalaciji) — main() to tretira kao "ne mogu procijeniti",
-    NE kao "48h+ tišina", da prazna/nova instalacija ne pošalje lažan alarm
-    prije nego ijedan video uopće postoji.
+    Vraća (datetime, None) na uspjeh, ili (None, razlog) kad se stanje ne
+    može pouzdano odrediti — nedostajući fajl, neispravan JSON, ili fajl bez
+    ijednog uploadanog zapisa. Sve tri se tretiraju kao alarm-vrijedne, ne
+    kao tih izlaz: na ovoj (već uhodanoj, ne novoj) instalaciji nijedna od
+    njih ne znači "sve u redu", nego da nešto sprječava i samo praćenje.
     """
     if not STATE_PATH.exists():
-        return None
-    entries = json.loads(STATE_PATH.read_text())
+        return None, f"{STATE_PATH.name} ne postoji"
+    try:
+        entries = json.loads(STATE_PATH.read_text())
+    except json.JSONDecodeError as e:
+        return None, f"{STATE_PATH.name} nije valjan JSON ({e})"
+    if not isinstance(entries, list):
+        return None, f"{STATE_PATH.name} nema očekivani oblik (lista zapisa)"
     uploaded = [e for e in entries if e.get("status") == "uploaded" and e.get("created")]
     if not uploaded:
-        return None
+        return None, f"{STATE_PATH.name} nema nijedan zapis sa status=='uploaded'"
     latest = max(uploaded, key=lambda e: e["created"])
-    return datetime.strptime(latest["created"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    try:
+        return datetime.strptime(latest["created"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc), None
+    except ValueError as e:
+        return None, f"najnoviji 'created' zapis se ne parsira ({e})"
+
+
+def load_alert_state():
+    if not ALERT_STATE_PATH.exists():
+        return None
+    try:
+        data = json.loads(ALERT_STATE_PATH.read_text())
+        return datetime.fromisoformat(data["last_alert_sent_at"])
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        log(f"  silence_alarm_state.json nije čitljiv ({e}) — tretiram kao da alarm još nije poslan.")
+        return None
+
+
+def save_alert_state(when):
+    ALERT_STATE_PATH.write_text(json.dumps({"last_alert_sent_at": when.isoformat()}))
+
+
+def clear_alert_state():
+    if ALERT_STATE_PATH.exists():
+        ALERT_STATE_PATH.unlink()
+        log("  Stanje oporavljeno — silence_alarm_state.json obrisan, sljedeća epizoda kreće od 48h praga.")
+
+
+def maybe_alert(message, env):
+    """Šalje Telegram alert samo ako nije već poslan u zadnjih RE_ALERT_AFTER_HOURS
+    — bez ovoga, svakih 6h dok traje tišina znači 4 alerta dnevno unedogled,
+    što je točno obrazac koji vodi do utišavanja kanala (isti onaj koji je
+    tjedan dana tišine prošao neopaženo)."""
+    now = datetime.now(timezone.utc)
+    last_alert = load_alert_state()
+    if last_alert is not None and (now - last_alert) < timedelta(hours=RE_ALERT_AFTER_HOURS):
+        log(f"  Alarm bi trebao ići, ali zadnji je poslan prije {(now - last_alert).total_seconds() / 3600:.1f}h — preskačem (re-alert tek nakon {RE_ALERT_AFTER_HOURS}h).")
+        return
+    send_telegram(message, env)
+    save_alert_state(now)
+    log("  Alarm poslan.")
 
 
 def main():
     env = load_env(ENV_PATH)
-    last = last_successful_upload()
+    last, unknown_reason = last_successful_upload()
 
     if last is None:
-        log("Nema nijednog zapisa sa status=='uploaded' u videos.json — ne mogu izračunati tišinu.")
+        log(f"Ne mogu odrediti zadnji uspješan upload: {unknown_reason}.")
+        maybe_alert(
+            f"UPOZORENJE — ne mogu odrediti stanje video pipelinea ({unknown_reason}). "
+            f"Ovo samo po sebi treba provjeru, neovisno od stvarnog stanja pipelinea.",
+            env,
+        )
         return 0
 
     hours_silent = (datetime.now(timezone.utc) - last).total_seconds() / 3600
     log(f"Zadnji uspješan upload: {last.isoformat()} ({hours_silent:.1f}h unatrag).")
 
     if hours_silent >= SILENCE_THRESHOLD_HOURS:
-        send_alert(
+        maybe_alert(
             f"UPOZORENJE — nema uspješnog video uploada {hours_silent:.0f}h "
             f"(zadnji: {last.strftime('%Y-%m-%d %H:%M')} UTC). Provjeri generate_video_cron.log.",
             env,
         )
-        log("  Alarm poslan (tišina >= threshold).")
+    else:
+        clear_alert_state()
 
     return 0
 
