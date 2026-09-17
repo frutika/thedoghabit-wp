@@ -196,23 +196,33 @@ def call_pexels_image(query, env, orientation="landscape"):
     identičnu sliku — otkriveno 2026-08-17, tri zaredom objavljena posta
     bez breed taga imala su bit-identičnu featured sliku jer je upit uvijek
     bio doslovno "dog".
+
+    Dva odvojena retry() poziva, ne jedan: search (api.pexels.com) i download
+    (images.pexels.com, CDN) su dva različita hosta na dvije različite
+    Cloudflare zone — dijeljenje jedne 'Pexels image search' etikete na oba
+    je jedno veče skrivalo koji je od njih stvarno pao (2026-09-17). Usput i
+    jeftinije: ako padne samo download, retry ne plaća novi search poziv.
     """
     api_key = env.get("PEXELS_API_KEY")
     if not api_key:
         raise RuntimeError("PEXELS_API_KEY nije postavljen u .env.")
 
-    def do_call():
+    def do_search():
         params = urllib.parse.urlencode({"query": query, "per_page": 10, "orientation": orientation})
         _, body = http_request("GET", f"https://api.pexels.com/v1/search?{params}",
                                headers={"Authorization": api_key})
         photos = json.loads(body).get("photos") or []
         if not photos:
             raise RuntimeError(f"Pexels nije vratio nijednu fotografiju za upit '{query}'.")
-        photo = random.choice(photos)
-        _, img_bytes = http_request("GET", photo["src"]["large2x"])
+        return random.choice(photos)["src"]["large2x"]
+
+    image_url = retry(do_search, what=f"Pexels search ('{query}')")
+
+    def do_download():
+        _, img_bytes = http_request("GET", image_url)
         return img_bytes
 
-    return retry(do_call, what=f"Pexels image search ('{query}')")
+    return retry(do_download, what=f"Pexels image download ({image_url})")
 
 
 # Kategorija iz topics.json -> konkretniji Pexels upit (relevantnije slike

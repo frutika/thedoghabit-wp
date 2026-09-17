@@ -384,22 +384,34 @@ def build_ass(words, path):
 # ---------------------------------------------------------------------------
 
 def call_pexels_image(query, env, orientation="landscape"):
-    """Besplatan Pexels API, bez strogog rate limita — stock foto po upitu."""
+    """Besplatan Pexels API, bez strogog rate limita — stock foto po upitu.
+
+    Dva odvojena retry() poziva, ne jedan: search (api.pexels.com) i download
+    (images.pexels.com, CDN) su dva različita hosta na dvije različite
+    Cloudflare zone — dijeljenje jedne 'Pexels image search' etikete na oba
+    je jedno veče skrivalo koji je od njih stvarno pao (2026-09-17). Usput i
+    jeftinije: ako padne samo download, retry ne plaća novi search poziv.
+    """
     api_key = env.get("PEXELS_API_KEY")
     if not api_key:
         raise RuntimeError("PEXELS_API_KEY nije postavljen u .env.")
 
-    def do_call():
+    def do_search():
         params = urllib.parse.urlencode({"query": query, "per_page": 1, "orientation": orientation})
         _, body = http_request("GET", f"https://api.pexels.com/v1/search?{params}",
                                headers={"Authorization": api_key})
         photos = json.loads(body).get("photos") or []
         if not photos:
             raise RuntimeError(f"Pexels nije vratio nijednu fotografiju za upit '{query}'.")
-        _, img_bytes = http_request("GET", photos[0]["src"]["large2x"])
+        return photos[0]["src"]["large2x"]
+
+    image_url = retry(do_search, what=f"Pexels search ('{query}')")
+
+    def do_download():
+        _, img_bytes = http_request("GET", image_url)
         return img_bytes
 
-    return retry(do_call, what=f"Pexels image search ('{query}')")
+    return retry(do_download, what=f"Pexels image download ({image_url})")
 
 
 def fetch_segment_image(prompt, env, dry_run):
