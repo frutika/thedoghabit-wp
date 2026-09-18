@@ -190,14 +190,30 @@ def get_next_post(env, state, wanted_slug=None):
     # postovi (videos.json status parked) ispadaju kroz done_slugs.
     done_slugs = {v["slug"] for v in state}
 
-    def do_call():
-        base = env["WP_URL"]
-        url = (base + "/wp-json/wp/v2/posts?per_page=100&orderby=date&order=asc"
-               "&_fields=id,slug,link,title,content,excerpt")
-        status, body = http_request("GET", url)
-        return json.loads(body)
+    PER_PAGE = 100  # WP REST gornja granica; više se ne može, pa se straniči
 
-    posts = retry(do_call, what="WP posts fetch")
+    def fetch_page(page):
+        url = (env["WP_URL"] + f"/wp-json/wp/v2/posts?per_page={PER_PAGE}&page={page}"
+               "&orderby=date&order=asc&_fields=id,slug,link,title,content,excerpt")
+        req = urllib.request.Request(url, headers={"User-Agent": DEFAULT_USER_AGENT})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read()), int(resp.headers.get("X-WP-TotalPages") or 0)
+
+    # Bez straničenja skripta je vidjela samo NAJSTARIJIH 100 postova (sortirano
+    # asc), pa je svaki post iza stotog bio nevidljiv — ni get_next_post ni
+    # --post-slug ga nisu mogli naći, a "Nema objavljenih postova bez videa"
+    # izlazi s kodom 0 bez alerta. Otkriveno 2026-09-18 (105 postova, 5 nevidljivih).
+    posts, page = [], 1
+    while True:
+        batch, total_pages = retry(lambda p=page: fetch_page(p),
+                                   what=f"WP posts fetch (str. {page})")
+        posts += batch
+        # Bez X-WP-TotalPages zaglavlja (0) nastavi dok stranica ne bude kraća
+        # od PER_PAGE — bolje jedan suvišni poziv nego tiho odsjeći postove.
+        more = page < total_pages if total_pages else len(batch) == PER_PAGE
+        if not batch or not more:
+            break
+        page += 1
 
     if wanted_slug:
         return next((p for p in posts if p["slug"] == wanted_slug), None)
