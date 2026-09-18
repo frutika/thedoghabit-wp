@@ -158,6 +158,38 @@ def maybe_alert(message, env):
         log("  Alarm NIJE poslan — stanje nije spremljeno, idući pokušaj za 6h (sljedeći cron run), ne za 24h.")
 
 
+def announce_recovery(last, hours_silent, env):
+    """Javi da je pipeline opet uploadao, ako je za tu epizodu alarm ikad poslan.
+
+    Bez ovoga alarm je jednosmjeran: upozorenje stigne u 06:00, popravak se
+    dogodi u 12:34, a onaj tko čita alarm ne zna da je već neistinit (2026-09-18
+    upravo to). Poruka o oporavku razlikuje alarm kojem se vjeruje od onoga koji
+    se nauči ignorirati.
+
+    Stanje se briše SAMO ako je poruka stvarno otišla — isto pravilo kao u
+    maybe_alert(): ako send_telegram() padne, stanje ostaje pa idući cron run
+    (za 6h) pokuša ponovno, umjesto da se oporavak tiho proguta.
+    Bez postojećeg stanja (alarm nikad nije poslan) nema što opozvati, pa se
+    ne šalje ništa.
+    """
+    if not ALERT_STATE_PATH.exists():
+        return
+    last_alert = load_alert_state()
+    alert_part = (
+        f" Alarm poslan {last_alert.strftime('%Y-%m-%d %H:%M')} UTC više ne vrijedi."
+        if last_alert is not None else " Prethodni alarm više ne vrijedi."
+    )
+    msg = (
+        f"OPORAVAK — video upload opet radi. Zadnji uspješan upload: "
+        f"{last.strftime('%Y-%m-%d %H:%M')} UTC ({hours_silent:.1f}h unatrag).{alert_part}"
+    )
+    if send_telegram(msg, env):
+        log("  Oporavak javljen.")
+        clear_alert_state()
+    else:
+        log("  Oporavak NIJE javljen — stanje zadržano, idući pokušaj za 6h (sljedeći cron run).")
+
+
 def main():
     env = load_env(ENV_PATH)
     last, unknown_reason = last_successful_upload()
@@ -181,7 +213,7 @@ def main():
             env,
         )
     else:
-        clear_alert_state()
+        announce_recovery(last, hours_silent, env)
 
     return 0
 
