@@ -167,7 +167,12 @@ def load_state():
 
 
 def save_state(state):
-    STATE_PATH.write_text(json.dumps(state, indent=2) + "\n")
+    # Atomski zapis (tmp + os.replace): pad usred pisanja ne smije ostaviti napola
+    # napisan videos.json — load_state() ga onda ne bi mogao parsirati i SVAKI
+    # sljedeći run bi pao dok ga netko ručno ne popravi.
+    tmp = STATE_PATH.with_name(STATE_PATH.name + ".tmp")
+    tmp.write_text(json.dumps(state, indent=2) + "\n")
+    os.replace(tmp, STATE_PATH)
 
 
 # ---------------------------------------------------------------------------
@@ -188,7 +193,14 @@ def get_next_post(env, state, wanted_slug=None):
     # pobjednici), 0=ostatak backloga. Unutar strateskih tiera najnoviji prvo
     # (svjez sadrzaj van odmah); backlog se drenira najstariji prvo. Parkirani
     # postovi (videos.json status parked) ispadaju kroz done_slugs.
-    done_slugs = {v["slug"] for v in state}
+    #
+    # 'rendered' (renderiran, nikad uploadan) NIJE gotov: bez ovoga je to bilo stanje
+    # bez izlaza — done_slugs ga je trajno isključivao pa video nikad nije izašao
+    # (best-reflective-dog-collar-nighttime-safety stajao je mjesec dana). Takav
+    # post ide na sam početak reda ("dovrši započeto") i renderira se iznova, pa
+    # se stari fajl ne uploada; uspješan run zamjenjuje stari zapis u main().
+    done_slugs = {v["slug"] for v in state if v.get("status") != "rendered"}
+    rendered_slugs = {v["slug"] for v in state if v.get("status") == "rendered"}
 
     PER_PAGE = 100  # WP REST gornja granica; više se ne može, pa se straniči
 
@@ -221,6 +233,11 @@ def get_next_post(env, state, wanted_slug=None):
     undone = [p for p in posts if p["slug"] not in done_slugs]
     if not undone:
         return None
+
+    resume = [p for p in undone if p["slug"] in rendered_slugs]
+    if resume:
+        log(f"  nastavljam nedovršen post (status rendered, nije uploadan): {resume[0]['slug']}")
+        return resume[0]
 
     top = max(_post_priority(p) for p in undone)
     if top > 0:
