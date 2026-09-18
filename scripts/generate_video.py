@@ -30,6 +30,7 @@ import io
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 import time
@@ -117,6 +118,23 @@ def send_alert(msg, env):
         log(f"  Telegram alert nije poslan: {e}")
 
 
+def _conn_diag(e):
+    """Obitelj adresa i adrese veze koja je STVARNO dala ovaj odgovor.
+
+    urllib bira IPv6 ili IPv4 po redoslijedu getaddrinfo (ovdje IPv6 prvi) i
+    ta se odluka inače nigdje ne vidi — pitanje "blokira li Cloudflare samo
+    IPv6?" bi se moglo odgovoriti tek pokusom, a blok je intermitentan pa se
+    ne da izazvati. Ovako sljedeći stvarni blok sam nosi odgovor u logu.
+    Čita privatne atribute (fp.fp.raw._sock), zato je omotano: ako se struktura
+    promijeni, dijagnostika samo postane "family=?", retry ne smije pasti."""
+    try:
+        s = e.fp.fp.raw._sock
+        fam = "IPv6" if s.family == socket.AF_INET6 else "IPv4"
+        return f"family={fam} src={s.getsockname()[0]} dst={s.getpeername()[0]}"
+    except Exception:
+        return "family=?"
+
+
 def retry(fn, attempts=3, base_delay=2, what=""):
     last_err = None
     for attempt in range(1, attempts + 1):
@@ -125,6 +143,7 @@ def retry(fn, attempts=3, base_delay=2, what=""):
         except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as e:
             last_err = e
             if isinstance(e, urllib.error.HTTPError):
+                conn = _conn_diag(e)  # prije e.read(): čita soket odgovora
                 detail = e.read().decode(errors="replace")
                 # cf-ray identifies which Cloudflare rule fired — without it,
                 # a report to a provider's support has nothing to point at.
@@ -134,7 +153,7 @@ def retry(fn, attempts=3, base_delay=2, what=""):
                 if cf_ray:
                     detail += (
                         f" [cf-ray={cf_ray} mitigated={e.headers.get('cf-mitigated')} "
-                        f"ratelimit={e.headers.get('x-ratelimit-remaining')}/{e.headers.get('x-ratelimit-limit')}]"
+                        f"ratelimit={e.headers.get('x-ratelimit-remaining')}/{e.headers.get('x-ratelimit-limit')} {conn}]"
                     )
             else:
                 detail = str(e)
