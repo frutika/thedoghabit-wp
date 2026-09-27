@@ -75,6 +75,32 @@ FPS = 30
 # odgledanog, a to je signal po kojem Shorts feed gura video dalje.
 TARGET_SECONDS = 25
 
+# Validacija Lumenta skripte (validate_script) — neovisna o modelu iza Lumente.
+# Pragovi slijede iz iste retencije: pola publike ode do ~12. s, cilj je 25 s
+# (~2,7 riječi/s izmjereni edge-tts tempo -> ~65 riječi). Skripta koja ih
+# prekrši NE ide u render: bolje nijedan video nego 50 s video koji gubi
+# publiku (Haiku je davao 117-128 riječi za cilj od 25 s).
+SCRIPT_MIN_SEGMENTS = 4
+SCRIPT_MAX_SEGMENTS = 6
+SCRIPT_MAX_WORDS = 70          # ~26 s naracije; malo zraka iznad 63 riječi koje Lumenta cilja
+SCRIPT_MAX_HOOK_WORDS = 10     # hook mora stati u ~2-3 s, prije nego što pola publike ode
+SCRIPT_MAX_TITLE_CHARS = 70    # YT Shorts feed reže naslov; kratko pitanje, ne SEO naslov
+IMAGE_PROMPT_MAX_WORDS = 6     # Pexels video search: kratki upiti s radnjom vraćaju više pogodaka
+# Hashtagovi koje pipeline sam dodaje na kraj opisa — ne smiju se ponoviti.
+PIPELINE_HASHTAGS = ["#shorts", "#dogs", "#dogtraining"]
+# Imena pasmina koja se miču iz image_prompta (duža imena prvo, da
+# "jack russell terrier" ne ostavi "terrier"). Pexels s pasminom u upitu
+# često vrati 0 vertikalnih klipova; pas je ionako JRT kroz VIDEO_BREEDS.
+BREED_NAMES = [
+    "cavalier king charles spaniel", "pembroke welsh corgi", "jack russell terrier",
+    "golden retriever", "labrador retriever", "german shepherd", "australian shepherd",
+    "border collie", "french bulldog", "siberian husky", "jack russell",
+    "retriever", "terrier", "shepherd", "bulldog", "labrador", "corgi", "collie",
+    "husky", "beagle", "dachshund", "spaniel", "poodle", "chihuahua", "pug", "jrt",
+]
+# Riječi bez vrijednosti za pretragu; miču se prije skraćivanja na 6 riječi.
+IMAGE_PROMPT_STOPWORDS = {"a", "an", "the", "with", "of", "and", "its", "their", "his", "her"}
+
 DEFAULT_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) thedoghabit-generate-video/1.0"
 
 
@@ -327,24 +353,24 @@ def pick_breed(post_title, slug, state, env=None):
     return JACK_RUSSELL_BREED
 
 
-def call_lumenta_script(post_title, article_text, breed, env, dry_run):
+def call_lumenta_script(post_title, article_text, breed, env, dry_run, retry_reason=None):
     """Skripta za Short: segments[] gdje je prvi hook a zadnji CTA, svaki sa
     svojim image_promptom. NAPOMENA: tool 'short_video_script' mora postojati
     na Lumenta internom endpointu (isti auth kao seo_blog_post)."""
     if dry_run:
         log("  [dry-run] koristim mock video skriptu")
         return {
-            "yt_title": f"{post_title} #shorts",
+            "yt_title": "Your dog can learn this in a week",
             "yt_description": f"Quick practical tips: {post_title}.",
             "yt_tags": ["dogs", "dog training", "puppy tips"],
             "segments": [
-                {"text": "Did you know most dogs can learn this in under a week?",
+                {"text": "Your dog can learn this in a week.",
                  "image_prompt": "curious dog tilting head, close-up"},
                 {"text": "Start with short sessions. Five minutes, twice a day, beats one long hour.",
                  "image_prompt": "person training a dog in a living room"},
                 {"text": "Reward instantly. Timing matters more than the size of the treat.",
                  "image_prompt": "dog receiving a treat from owner's hand"},
-                {"text": "Want the full step-by-step plan? Link in the description.",
+                {"text": "Does your dog do this? Tell me in the comments.",
                  "image_prompt": "happy dog sitting next to owner outdoors"},
             ],
         }
@@ -359,6 +385,9 @@ def call_lumenta_script(post_title, article_text, breed, env, dry_run):
                 "audience": "dog owners, global, English-speaking",
                 "language": "en",
                 "breed": breed,
+                # Lumenta nepoznata polja tiho ignorira (bira samo poznata),
+                # pa je ovo sigurno; ostaje u payloadu radi traga/buduće podrške.
+                **({"retry_reason": retry_reason} if retry_reason else {}),
             },
         }).encode()
         headers = {
@@ -372,6 +401,136 @@ def call_lumenta_script(post_title, article_text, breed, env, dry_run):
     # Isti široki razmaci kao u generate_post.py — Anthropic 529 prozori
     # znaju trajati više minuta.
     return retry(do_call, attempts=4, base_delay=45, what="Lumenta video script")
+
+
+# ---------------------------------------------------------------------------
+# Validacija skripte — ne ovisi o tome koji model je iza Lumente
+# ---------------------------------------------------------------------------
+
+class ScriptValidationError(RuntimeError):
+    pass
+
+
+_EMOJI_RE = re.compile(
+    "[\U0001F000-\U0001FAFF\U00002600-\U000027BF\U00002B00-\U00002BFF"
+    "\U0000FE0F\U0000200D\U000020E3]+")
+_MARKDOWN_RE = re.compile(r"[*_`#]+")
+
+
+def clean_narration(text):
+    """Tekst za TTS: bez markdowna (*them*), emojija i višestrukih razmaka —
+    edge-tts bi ih čitao ili bi završili u titlovima."""
+    text = _EMOJI_RE.sub("", text)
+    text = _MARKDOWN_RE.sub("", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+_BREED_RES = [re.compile(r"\b" + re.escape(b) + r"s?\b", re.I)
+              for b in sorted(set(VIDEO_BREEDS) | set(BREED_NAMES), key=len, reverse=True)]
+
+
+def clean_image_prompt(prompt):
+    """Pexels upit: bez pasmina (cijeli VIDEO_BREEDS opisi pa imena), bez
+    punila, <= IMAGE_PROMPT_MAX_WORDS riječi. Vraća (upit, maknute_pasmine)."""
+    removed = []
+    for rx in _BREED_RES:
+        for m in rx.findall(prompt):
+            removed.append(m.strip())
+        prompt = rx.sub(" ", prompt)
+    words = [w for w in re.sub(r"[^\w\s'-]", " ", prompt).split()
+             if w.lower() not in IMAGE_PROMPT_STOPWORDS]
+    # Bez imenice psa upit postaje "running in park" — Pexels vrati ljude.
+    if not any(w.lower().rstrip("s") in ("dog", "puppy", "puppie", "pup") for w in words):
+        words.insert(0, "dog")
+    return " ".join(words[:IMAGE_PROMPT_MAX_WORDS]), removed
+
+
+def count_words(text):
+    return len(text.split())
+
+
+def script_violations(script):
+    """Kršenja pragova (lista opisa); prazna lista = skripta prolazi."""
+    problems = []
+    segments = script.get("segments") or []
+    n = len(segments)
+    if not SCRIPT_MIN_SEGMENTS <= n <= SCRIPT_MAX_SEGMENTS:
+        problems.append(f"{n} segmenata (dozvoljeno {SCRIPT_MIN_SEGMENTS}-{SCRIPT_MAX_SEGMENTS})")
+    total = sum(count_words(s.get("text", "")) for s in segments)
+    if total > SCRIPT_MAX_WORDS:
+        problems.append(f"{total} riječi naracije (max {SCRIPT_MAX_WORDS})")
+    if segments:
+        hook = count_words(segments[0].get("text", ""))
+        if hook > SCRIPT_MAX_HOOK_WORDS:
+            problems.append(f"hook ima {hook} riječi (max {SCRIPT_MAX_HOOK_WORDS})")
+    title = script.get("yt_title") or ""
+    if not title.strip():
+        problems.append("prazan yt_title")
+    elif len(title) > SCRIPT_MAX_TITLE_CHARS:
+        problems.append(f"yt_title ima {len(title)} znakova (max {SCRIPT_MAX_TITLE_CHARS})")
+    return problems
+
+
+def validate_script(script):
+    """Čisti skriptu na mjestu i provjerava pragove. Diže ScriptValidationError
+    za Lumenta {"error": ...} (bez retryja — isti input daje istu grešku) i
+    ValueError s popisom kršenja kad pragovi padnu (pozivatelj radi retry)."""
+    if script.get("error"):
+        raise ScriptValidationError(f"Lumenta vratila grešku: {script['error']}")
+
+    segments = [s for s in (script.get("segments") or [])
+                if isinstance(s, dict) and (s.get("text") or "").strip()]
+    for i, seg in enumerate(segments):
+        cleaned = clean_narration(seg["text"])
+        if cleaned != seg["text"]:
+            log(f"  validacija: segment {i + 1} tekst očišćen ({seg['text']!r} -> {cleaned!r})")
+            seg["text"] = cleaned
+        prompt, removed = clean_image_prompt(seg.get("image_prompt") or "")
+        if prompt != (seg.get("image_prompt") or ""):
+            log(f"  validacija: segment {i + 1} image_prompt {seg.get('image_prompt')!r} -> {prompt!r}"
+                + (f" (maknuto: {', '.join(removed)})" if removed else ""))
+            seg["image_prompt"] = prompt
+    script["segments"] = segments
+
+    problems = script_violations(script)
+    if problems:
+        raise ValueError("; ".join(problems))
+    return script
+
+
+def get_valid_script(post_title, article_text, breed, env, dry_run):
+    """Lumenta skripta koja prolazi validate_script, uz JEDAN ponovni poziv
+    ako pragovi padnu. Drugi pad = ScriptValidationError: predug video se ne
+    renderira (main šalje alert i izlazi s 1)."""
+    script = call_lumenta_script(post_title, article_text, breed, env, dry_run)
+    try:
+        return validate_script(script)
+    except ValueError as e:
+        reason = str(e)
+        log(f"  validacija: skripta ne prolazi ({reason}) — jedan ponovni poziv Lumente")
+    script = call_lumenta_script(post_title, article_text, breed, env, dry_run, retry_reason=reason)
+    try:
+        return validate_script(script)
+    except ValueError as e:
+        raise ScriptValidationError(f"skripta ni u drugom pokušaju ne prolazi validaciju: {e}")
+
+
+def build_description(yt_description, post_link):
+    """Opis za YT: tekst skripte + link + PIPELINE_HASHTAGS, bez ponavljanja
+    hashtaga koje skripta već ima (usporedba bez obzira na velika slova)."""
+    pipeline = {h.lower() for h in PIPELINE_HASHTAGS}
+    seen = set()
+
+    def keep(m):
+        tag = m.group(0).lower()
+        if tag in pipeline or tag in seen:
+            return ""
+        seen.add(tag)
+        return m.group(0)
+
+    body = re.sub(r"#\w+", keep, yt_description or "")
+    body = re.sub(r"[ \t]{2,}", " ", body).strip()
+    return f"{body}\n\nRead the full guide: {post_link}\n\n" + " ".join(PIPELINE_HASHTAGS)
 
 
 # ---------------------------------------------------------------------------
@@ -813,15 +972,13 @@ def main():
         article_text = strip_html(post["content"]["rendered"])
         breed = pick_breed(post_title, slug, state, env)
         log(f"  pasmina za ovaj video: {breed}")
-        script = call_lumenta_script(post_title, article_text, breed, env, args.dry_run)
+        script = get_valid_script(post_title, article_text, breed, env, args.dry_run)
         segments = script["segments"]
-        if not segments:
-            raise RuntimeError("Lumenta skripta nema segmenata.")
         # Cijela skripta (s image promptovima) uz video — bez ovoga se promptovi
         # gube pa se slike ne mogu ciljano popraviti/regenerirati naknadno.
         (workdir / "script.json").write_text(
             json.dumps(script, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        log(f"  skripta: {len(segments)} segmenata")
+        log(f"  skripta: {len(segments)} segmenata, {sum(count_words(s['text']) for s in segments)} riječi naracije")
 
         narration = " ".join(s["text"].strip() for s in segments)
         words = synthesize_voice(narration, workdir / "voice.mp3", env)
@@ -864,9 +1021,7 @@ def main():
         size_mb = final_path.stat().st_size / 1024 / 1024
         log(f"Video renderiran: {final_path} ({size_mb:.1f} MB)")
 
-        description = (script["yt_description"].strip()
-                       + f"\n\nRead the full guide: {post['link']}"
-                       + "\n\n#shorts #dogs #dogtraining")
+        description = build_description(script.get("yt_description", ""), post["link"])
         meta = {
             "post_id": post["id"],
             "slug": slug,
