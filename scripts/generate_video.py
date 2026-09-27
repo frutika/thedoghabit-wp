@@ -2,10 +2,10 @@
 """generate_video.py — thedoghabit.com YouTube Shorts pipeline.
 
 Uzima najstariji objavljeni WP post koji još nema video (state u videos.json),
-generira kratku video skriptu preko Lumenta internog endpointa (tool
+generira kratku (~25 s) video skriptu preko Lumenta internog endpointa (tool
 'short_video_script' — mora postojati na Lumenta strani), voiceover preko
 edge-tts (besplatan, bez API ključa; word timestampovi iz istog poziva postaju
-titlovi), vertikalne slike preko Pexels API-ja, i montira 9:16 MP4 (1080x1920,
+titlovi), vertikalne stock video klipove preko Pexels API-ja (fallback: slike), i montira 9:16 MP4 (1080x1920,
 Ken Burns zoom + hardcoded titlovi) preko ffmpeg-a.
 
 Rezultat: videos/<slug>/<slug>.mp4 + <slug>.json (YT naslov/opis/tagovi za
@@ -70,7 +70,10 @@ JACK_RUSSELL_BREED = "small white and tan smooth-coat jack russell terrier"
 
 VIDEO_W, VIDEO_H = 1080, 1920
 FPS = 30
-TARGET_SECONDS = 55  # ciljna duljina naracije (Shorts limit je 3 min, sweet spot <60 s)
+# 25 s, ne 55: YT Analytics (28 dana do 2026-09-26) pokazuje prosjek gledanja
+# 19-24 s, a pola publike ode do ~12. sekunde. Kraći video = veći postotak
+# odgledanog, a to je signal po kojem Shorts feed gura video dalje.
+TARGET_SECONDS = 25
 
 DEFAULT_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) thedoghabit-generate-video/1.0"
 
@@ -225,7 +228,7 @@ def get_next_post(env, state, wanted_slug=None):
 
     def fetch_page(page):
         url = (env["WP_URL"] + f"/wp-json/wp/v2/posts?per_page={PER_PAGE}&page={page}"
-               "&orderby=date&order=asc&_fields=id,slug,link,title,content,excerpt")
+               "&orderby=date&order=asc&_fields=id,slug,link,title,content,excerpt,categories")
         req = urllib.request.Request(url, headers={"User-Agent": DEFAULT_USER_AGENT})
         with urllib.request.urlopen(req, timeout=30) as resp:
             return json.loads(resp.read()), int(resp.headers.get("X-WP-TotalPages") or 0)
@@ -250,6 +253,16 @@ def get_next_post(env, state, wanted_slug=None):
         return next((p for p in posts if p["slug"] == wanted_slug), None)
 
     undone = [p for p in posts if p["slug"] not in done_slugs]
+
+    # Gear postovi ne idu u Shorts: "Best X" videi imaju najgore brojke na
+    # kanalu (31-48 pregleda). Samo auto-odabir; --post-slug ih i dalje može
+    # eksplicitno tražiti.
+    gear_ids = _excluded_category_ids(env)
+    if gear_ids:
+        before = len(undone)
+        undone = [p for p in undone if not set(p.get("categories") or []) & gear_ids]
+        if before != len(undone):
+            log(f"  preskačem {before - len(undone)} gear postova (VIDEO_EXCLUDE_CATEGORIES)")
     if not undone:
         return None
 
@@ -262,6 +275,23 @@ def get_next_post(env, state, wanted_slug=None):
     if top > 0:
         return [p for p in undone if _post_priority(p) == top][-1]
     return undone[0]
+
+
+def _excluded_category_ids(env):
+    """WP ID-evi kategorija koje ne idu u video (default: gear). Fail-open:
+    ako dohvat padne, logira i ne filtrira — bolje gear video nego nijedan."""
+    slugs = [s.strip() for s in env.get("VIDEO_EXCLUDE_CATEGORIES", "gear").split(",") if s.strip()]
+    if not slugs:
+        return set()
+    url = env["WP_URL"] + "/wp-json/wp/v2/categories?_fields=id,slug&slug=" + ",".join(slugs)
+    try:
+        def do_call():
+            _, body = http_request("GET", url)
+            return json.loads(body)
+        return {c["id"] for c in retry(do_call, what="WP categories fetch")}
+    except Exception as e:
+        log(f"  UPOZORENJE: ne mogu dohvatiti kategorije za isključivanje ({e}) — ne filtriram")
+        return set()
 
 
 _SLEEP_KW = ("sleep",)
@@ -285,13 +315,16 @@ def _post_priority(post):
 # Lumenta — video skripta iz članka
 # ---------------------------------------------------------------------------
 
-def pick_breed(post_title, slug, state):
-    """JRT hub postovi uvijek dobivaju JRT maskotu (konzistentno s blogom);
-    ostali rotiraju kroz VIDEO_BREEDS po broju dosad obrađenih videa."""
-    haystack = f"{post_title} {slug}".lower()
-    if "jack russell" in haystack or "jack-russell" in haystack:
-        return JACK_RUSSELL_BREED
-    return VIDEO_BREEDS[len(state) % len(VIDEO_BREEDS)]
+def pick_breed(post_title, slug, state, env=None):
+    """Jack Russell je stalni lik kanala (ista maskota kao na blogu) — rotacija
+    pasmina je kanalu oduzimala prepoznatljivost. VIDEO_ROTATE_BREEDS=1 u .env-u
+    vraća staru rotaciju kroz VIDEO_BREEDS."""
+    if (env or {}).get("VIDEO_ROTATE_BREEDS") == "1":
+        haystack = f"{post_title} {slug}".lower()
+        if "jack russell" in haystack or "jack-russell" in haystack:
+            return JACK_RUSSELL_BREED
+        return VIDEO_BREEDS[len(state) % len(VIDEO_BREEDS)]
+    return JACK_RUSSELL_BREED
 
 
 def call_lumenta_script(post_title, article_text, breed, env, dry_run):
@@ -466,6 +499,52 @@ def call_pexels_image(query, env, orientation="landscape"):
     return retry(do_download, what=f"Pexels image download ({image_url})")
 
 
+def call_pexels_video(query, env, min_width=720):
+    """Vertikalni stock video klip s Pexelsa (isti API ključ i ista kvota kao
+    foto search). Vraća bytes MP4-a. Bira najmanji mp4 koji je barem min_width
+    širok — 4K fajlovi su nepotrebno teški za 1080x1920 izlaz."""
+    api_key = env.get("PEXELS_API_KEY")
+    if not api_key:
+        raise RuntimeError("PEXELS_API_KEY nije postavljen u .env.")
+
+    def do_search():
+        params = urllib.parse.urlencode({"query": query, "per_page": 5,
+                                         "orientation": "portrait", "size": "medium"})
+        _, body = http_request("GET", f"https://api.pexels.com/videos/search?{params}",
+                               headers={"Authorization": api_key})
+        for video in json.loads(body).get("videos") or []:
+            files = [f for f in video.get("video_files") or []
+                     if f.get("file_type") == "video/mp4"
+                     and (f.get("height") or 0) > (f.get("width") or 0)
+                     and (f.get("width") or 0) >= min_width]
+            if files:
+                return min(files, key=lambda f: f["width"])["link"]
+        raise RuntimeError(f"Pexels nije vratio vertikalni video za upit '{query}'.")
+
+    video_url = retry(do_search, what=f"Pexels video search ('{query}')")
+
+    def do_download():
+        _, data = http_request("GET", video_url, timeout=120)
+        return data
+
+    return retry(do_download, what=f"Pexels video download ({video_url})")
+
+
+def render_clip_segment(clip_name, duration, out_name, workdir, env):
+    """Stock klip -> segment istih parametara kao render_segment (1080x1920,
+    30 fps, h264 yuv420p, bez zvuka), da concat s '-c copy' radi i kad se
+    klipovi i slike miješaju. -stream_loop pokriva klipove kraće od segmenta."""
+    frames = max(int(round(duration * FPS)), FPS)
+    vf = (f"scale={VIDEO_W}:{VIDEO_H}:force_original_aspect_ratio=increase,"
+          f"crop={VIDEO_W}:{VIDEO_H},fps={FPS},setsar=1")
+    run_cmd([env.get("FFMPEG_BIN") or "ffmpeg", "-y", "-stream_loop", "-1", "-i", clip_name,
+             "-vf", vf, "-frames:v", frames, "-an",
+             "-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p",
+             "-video_track_timescale", "15360",
+             out_name],
+            cwd=workdir, what=f"ffmpeg clip segment {out_name}")
+
+
 def fetch_segment_image(prompt, env, dry_run):
     if dry_run:
         log("  [dry-run] koristim placeholder sliku umjesto Pexels API-ja")
@@ -524,6 +603,7 @@ def render_segment(image_name, duration, out_name, workdir, env):
     run_cmd([env.get("FFMPEG_BIN") or "ffmpeg", "-y", "-i", image_name,
              "-vf", vf, "-frames:v", frames,
              "-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p",
+             "-video_track_timescale", "15360",
              out_name],
             cwd=workdir, what=f"ffmpeg segment {out_name}")
 
@@ -731,7 +811,7 @@ def main():
 
     try:
         article_text = strip_html(post["content"]["rendered"])
-        breed = pick_breed(post_title, slug, state)
+        breed = pick_breed(post_title, slug, state, env)
         log(f"  pasmina za ovaj video: {breed}")
         script = call_lumenta_script(post_title, article_text, breed, env, args.dry_run)
         segments = script["segments"]
@@ -752,14 +832,33 @@ def main():
 
         segment_names = []
         durations = allocate_durations(segments, total_audio + 0.5)
+        # Video klipovi umjesto statičnih slika: pas koji se kreće u prve dvije
+        # sekunde zaustavlja skrolanje, Ken Burns zoom preko fotke ne.
+        # VIDEO_CLIPS=0 u .env-u vraća samo slike. Klip je best-effort: ako
+        # search/download/render padne, segment pada natrag na sliku.
+        use_clips = env.get("VIDEO_CLIPS", "1") != "0" and not args.dry_run
+        clip_count = 0
         for i, (seg, dur) in enumerate(zip(segments, durations)):
-            img_bytes = fetch_segment_image(seg["image_prompt"], env, args.dry_run)
-            img_name = f"img_{i}.jpg"
-            (workdir / img_name).write_bytes(process_image_vertical(img_bytes))
             seg_name = f"seg_{i}.mp4"
-            render_segment(img_name, dur, seg_name, workdir, env)
+            kind = "slika"
+            if use_clips:
+                try:
+                    clip_name = f"clip_{i}.mp4"
+                    (workdir / clip_name).write_bytes(call_pexels_video(seg["image_prompt"], env))
+                    render_clip_segment(clip_name, dur, seg_name, workdir, env)
+                    kind = "klip"
+                    clip_count += 1
+                except Exception as e:
+                    log(f"  segment {i + 1}: klip nije uspio ({e}) — koristim sliku")
+            if kind == "slika":
+                img_bytes = fetch_segment_image(seg["image_prompt"], env, args.dry_run)
+                img_name = f"img_{i}.jpg"
+                (workdir / img_name).write_bytes(process_image_vertical(img_bytes))
+                render_segment(img_name, dur, seg_name, workdir, env)
             segment_names.append(seg_name)
-            log(f"  segment {i + 1}/{len(segments)}: {dur:.1f} s")
+            log(f"  segment {i + 1}/{len(segments)}: {dur:.1f} s ({kind})")
+        if use_clips:
+            log(f"  klipova: {clip_count}/{len(segments)}")
 
         final_path = assemble_video(segment_names, workdir, slug, env)
         size_mb = final_path.stat().st_size / 1024 / 1024
