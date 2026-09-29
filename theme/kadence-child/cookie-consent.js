@@ -7,6 +7,14 @@
  * sajtu — kategorija postoji da budući skript može provjeriti pristanak:
  *   window.tdhConsent()          → {essential, analytics, ts} | null
  *   document event 'tdh-consent' → detail = novi pristanak
+ *
+ * Od 2026-09-29 pristanak za OGLASE (AdSense) skuplja Googleov certificirani CMP
+ * (AdSense → Privacy & messaging, GDPR poruka). Naš banner se zato više NE
+ * prikazuje automatski — dva bannera s različitim tekstom zbunjuju posjetitelja,
+ * a jedina naša opcionalna kategorija (analitika) trenutno ništa ne učitava.
+ * Footer link "Cookie settings" otvara Googleov dijalog za promjenu pristanka
+ * (googlefc.showRevocationMessage); naš modal je fallback ako Google CMP nije
+ * učitan (npr. posjetitelj izvan EGP-a ili blokiran skript).
  */
 (function () {
 	var KEY = 'tdh_consent';
@@ -50,9 +58,7 @@
 		document.body.classList.remove('tdh-cc-modal-open');
 	}
 
-	if (!getConsent()) {
-		banner.hidden = false;
-	}
+	// Namjerno bez automatskog prikaza bannera — vidi komentar na vrhu.
 
 	banner.querySelector('.tdh-cc-accept').addEventListener('click', function () {
 		saveConsent(true);
@@ -89,7 +95,12 @@
 		var link = e.target.closest && e.target.closest('a[href$="#cookie-settings"]');
 		if (link) {
 			e.preventDefault();
-			openModal();
+			var fc = window.googlefc;
+			if (fc && typeof fc.showRevocationMessage === 'function') {
+				fc.showRevocationMessage();
+			} else {
+				openModal();
+			}
 		}
 	});
 })();
