@@ -11,6 +11,9 @@
  * (ni iframe ni thumbnail), pa nema kolačića trećih strana i stranica ostaje brza.
  * Klik učitava youtube-nocookie.com iframe s autoplayom.
  *
+ * VideoObject JSON-LD (naslov/datum iz meta polja koja puni pipeline) daje
+ * Googleu do znanja da članak ima video, jer fasada nema iframe u HTML-u.
+ *
  * Meta je izvan contenta (kao thedoghabit_faq u thedoghabit-rest-meta.php): kses
  * Authorima striga <iframe> iz contenta, a ovako se embed može maknuti/zamijeniti
  * bez diranja teksta članka.
@@ -27,16 +30,74 @@ function thedoghabit_valid_yt_id( $value ) {
 	return preg_match( '/^[A-Za-z0-9_-]{11}$/', $value ) ? $value : '';
 }
 
+const THEDOGHABIT_YT_TITLE_META = 'thedoghabit_youtube_title';
+const THEDOGHABIT_YT_DATE_META  = 'thedoghabit_youtube_date';
+
+function thedoghabit_valid_iso_date( $value ) {
+	$value = trim( (string) $value );
+	return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ? $value : '';
+}
+
 add_action( 'init', function () {
+	$auth = function () {
+		return current_user_can( 'edit_posts' );
+	};
 	register_post_meta( 'post', THEDOGHABIT_YT_META, [
 		'show_in_rest'      => true,
 		'single'            => true,
 		'type'              => 'string',
 		'sanitize_callback' => 'thedoghabit_valid_yt_id',
-		'auth_callback'     => function () {
-			return current_user_can( 'edit_posts' );
-		},
+		'auth_callback'     => $auth,
 	] );
+	register_post_meta( 'post', THEDOGHABIT_YT_TITLE_META, [
+		'show_in_rest'      => true,
+		'single'            => true,
+		'type'              => 'string',
+		'sanitize_callback' => 'sanitize_text_field',
+		'auth_callback'     => $auth,
+	] );
+	register_post_meta( 'post', THEDOGHABIT_YT_DATE_META, [
+		'show_in_rest'      => true,
+		'single'            => true,
+		'type'              => 'string',
+		'sanitize_callback' => 'thedoghabit_valid_iso_date',
+		'auth_callback'     => $auth,
+	] );
+}, 20 );
+
+/**
+ * VideoObject JSON-LD. Fasada ne stavlja iframe u HTML, pa Googlebot bez ovoga
+ * ne zna da članak ima video. Schema ništa ne učitava s YouTubea u pregledniku
+ * posjetitelja (thumbnailUrl čita samo Google).
+ */
+add_action( 'wp_head', function () {
+	if ( ! is_singular( 'post' ) ) {
+		return;
+	}
+	$post_id = get_queried_object_id();
+	$id      = thedoghabit_valid_yt_id( get_post_meta( $post_id, THEDOGHABIT_YT_META, true ) );
+	if ( ! $id ) {
+		return;
+	}
+	$title = trim( (string) get_post_meta( $post_id, THEDOGHABIT_YT_TITLE_META, true ) );
+	if ( '' === $title ) {
+		$title = wp_strip_all_tags( get_the_title( $post_id ) );
+	}
+	$date = thedoghabit_valid_iso_date( get_post_meta( $post_id, THEDOGHABIT_YT_DATE_META, true ) );
+	if ( '' === $date ) {
+		$date = get_the_date( 'Y-m-d', $post_id );
+	}
+	$schema = [
+		'@context'     => 'https://schema.org',
+		'@type'        => 'VideoObject',
+		'name'         => $title,
+		'description'  => wp_strip_all_tags( get_the_title( $post_id ) ) . ' — short video from The Dog Habit.',
+		'thumbnailUrl' => [ 'https://i.ytimg.com/vi/' . $id . '/hqdefault.jpg' ],
+		'uploadDate'   => $date,
+		'embedUrl'     => 'https://www.youtube.com/embed/' . $id,
+		'url'          => get_permalink( $post_id ),
+	];
+	echo '<script type="application/ld+json">' . wp_json_encode( $schema ) . "</script>\n";
 }, 20 );
 
 add_filter( 'the_content', function ( $content ) {

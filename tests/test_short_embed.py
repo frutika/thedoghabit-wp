@@ -49,7 +49,8 @@ class EmbedTests(unittest.TestCase):
 
     def test_backfill_skips_done_and_rendered_and_survives_errors(self):
         state = [
-            {"slug": "done", "post_id": 1, "youtube_id": "aaaaaaaaaaa", "status": "uploaded", "embedded": True},
+            {"slug": "done", "post_id": 1, "youtube_id": "aaaaaaaaaaa", "status": "uploaded", "embedded": True,
+             "embed_v": gv.EMBED_VERSION},
             {"slug": "rendered", "post_id": 2, "youtube_id": None, "status": "rendered"},
             {"slug": "boom", "post_id": 3, "youtube_id": "bbbbbbbbbbb", "status": "uploaded"},
             {"slug": "ok", "post_id": 4, "youtube_id": "ccccccccccc", "status": "uploaded"},
@@ -68,6 +69,41 @@ class EmbedTests(unittest.TestCase):
         self.assertEqual([s for s, _ in skipped], ["boom"])
         self.assertEqual(emb.call_count, 2)
         save.assert_called_once()
+
+
+class VideoMetaTests(unittest.TestCase):
+    def test_title_and_date_sent_with_id(self):
+        sent = []
+
+        def fake(method, url, headers=None, data=None, timeout=30):
+            if "oembed" in url:
+                return 200, b"{}"
+            sent.append(json.loads(data))
+            return 200, json.dumps({"meta": {gv.YT_META_KEY: "abcdefghijk"}}).encode()
+
+        entry = {"slug": "s", "post_id": 7, "youtube_id": "abcdefghijk", "status": "uploaded",
+                 "yt_title": "Why Dogs Yawn #shorts #dogs", "created": "2026-09-30 12:31:05"}
+        with mock.patch.object(gv, "http_request", side_effect=fake):
+            self.assertIsNone(gv.embed_short(ENV, entry))
+        self.assertEqual(sent[-1]["meta"], {gv.YT_META_KEY: "abcdefghijk",
+                                            gv.YT_TITLE_META_KEY: "Why Dogs Yawn",
+                                            gv.YT_DATE_META_KEY: "2026-09-30"})
+        self.assertEqual(entry["embed_v"], gv.EMBED_VERSION)
+
+    def test_title_from_sidecar_when_missing_in_state(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "s").mkdir()
+            (Path(d) / "s" / "s.json").write_text(json.dumps({"yt_title": "Crate Tips #shorts"}))
+            with mock.patch.object(gv, "OUTPUT_DIR", Path(d)):
+                self.assertEqual(gv.video_meta_for({"slug": "s", "created": "bad"}), ("Crate Tips", ""))
+
+    def test_old_embeds_are_reprocessed_by_backfill(self):
+        state = [{"slug": "old", "post_id": 1, "youtube_id": "aaaaaaaaaaa", "status": "uploaded", "embedded": True}]
+        with mock.patch.object(gv, "embed_short", return_value=None) as emb, \
+                mock.patch.object(gv, "save_state"):
+            gv.backfill_embeds(ENV, state)
+        emb.assert_called_once()
 
 
 if __name__ == "__main__":
