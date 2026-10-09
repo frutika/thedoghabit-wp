@@ -966,7 +966,7 @@ def clean_video_title(title):
 def video_meta_for(entry):
     """Naslov i datum uploada za VideoObject schema. Naslov dolazi iz zapisa ili
     iz sidecar JSON-a koji main() zapisuje uz render (videos/<slug>/<slug>.json);
-    datum iz 'created' (vrijeme uploada) kao ISO datum."""
+    datum i vrijeme iz 'created' (vrijeme uploada, UTC) kao ISO 8601 sa zonom."""
     title = entry.get("yt_title")
     if not title:
         sidecar = OUTPUT_DIR / entry.get("slug", "") / f"{entry.get('slug', '')}.json"
@@ -974,8 +974,11 @@ def video_meta_for(entry):
             title = json.loads(sidecar.read_text(encoding="utf-8")).get("yt_title")
         except (OSError, ValueError):
             title = None
-    created = (entry.get("created") or "")[:10]
-    date = created if re.fullmatch(r"\d{4}-\d{2}-\d{2}", created) else ""
+    created = entry.get("created") or ""
+    date = ""
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", created):
+        # 'created' je UTC (vidi main()); Google traži i vremensku zonu.
+        date = created.replace(" ", "T") + "+00:00"
     return clean_video_title(title), date
 
 
@@ -999,9 +1002,10 @@ def wp_set_youtube_meta(env, post_id, youtube_id, title="", date=""):
     return status
 
 
-# 2 = uz ID se šalju i naslov + datum za VideoObject schema. Zapisi s nižom
-# verzijom (ili bez nje) backfill ponovno obrađuje.
-EMBED_VERSION = 2
+# 2 = uz ID se šalju i naslov + datum za VideoObject schema.
+# 3 = datum je puni ISO 8601 s vremenom i zonom (Google upozorava na sam datum).
+# Zapise s nižom verzijom (ili bez nje) backfill ponovno obrađuje.
+EMBED_VERSION = 3
 
 
 def embed_short(env, entry):
@@ -1172,7 +1176,7 @@ def main():
         "video": str(final_path.relative_to(PROJECT_DIR)),
         "youtube_id": youtube_id,
         "yt_title": meta["yt_title"],
-        "created": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "created": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
     }
     # Embed na stranici članka. Best-effort: video je već na YouTubeu, pa pad
     # ovdje ne smije označiti run kao neuspjeh — --backfill-embeds ga nadoknadi.

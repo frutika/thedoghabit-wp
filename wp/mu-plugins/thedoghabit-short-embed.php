@@ -33,9 +33,14 @@ function thedoghabit_valid_yt_id( $value ) {
 const THEDOGHABIT_YT_TITLE_META = 'thedoghabit_youtube_title';
 const THEDOGHABIT_YT_DATE_META  = 'thedoghabit_youtube_date';
 
+// Google za uploadDate traži datum, vrijeme i vremensku zonu (ISO 8601);
+// stari zapisi sa samim datumom dobivaju ponoć UTC.
 function thedoghabit_valid_iso_date( $value ) {
 	$value = trim( (string) $value );
-	return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ? $value : '';
+	if ( preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/', $value ) ) {
+		return $value;
+	}
+	return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ? $value . 'T00:00:00+00:00' : '';
 }
 
 add_action( 'init', function () {
@@ -85,7 +90,7 @@ add_action( 'wp_head', function () {
 	}
 	$date = thedoghabit_valid_iso_date( get_post_meta( $post_id, THEDOGHABIT_YT_DATE_META, true ) );
 	if ( '' === $date ) {
-		$date = get_the_date( 'Y-m-d', $post_id );
+		$date = get_the_date( 'c', $post_id );
 	}
 	$schema = [
 		'@context'     => 'https://schema.org',
