@@ -954,11 +954,41 @@ def yt_is_embeddable(youtube_id):
         return False
 
 
-def wp_set_youtube_meta(env, post_id, youtube_id):
-    """Upiše YouTube ID u post meta. Treba WP_USER + WP_APP_PASSWORD (isti
-    korisnik kao generate_post.py)."""
+YT_TITLE_META_KEY = "thedoghabit_youtube_title"
+YT_DATE_META_KEY = "thedoghabit_youtube_date"
+
+
+def clean_video_title(title):
+    """Naslov za VideoObject schema: bez hashtagova (#shorts i sl.)."""
+    return re.sub(r"\s*#\w+", "", title or "").strip()
+
+
+def video_meta_for(entry):
+    """Naslov i datum uploada za VideoObject schema. Naslov dolazi iz zapisa ili
+    iz sidecar JSON-a koji main() zapisuje uz render (videos/<slug>/<slug>.json);
+    datum iz 'created' (vrijeme uploada) kao ISO datum."""
+    title = entry.get("yt_title")
+    if not title:
+        sidecar = OUTPUT_DIR / entry.get("slug", "") / f"{entry.get('slug', '')}.json"
+        try:
+            title = json.loads(sidecar.read_text(encoding="utf-8")).get("yt_title")
+        except (OSError, ValueError):
+            title = None
+    created = (entry.get("created") or "")[:10]
+    date = created if re.fullmatch(r"\d{4}-\d{2}-\d{2}", created) else ""
+    return clean_video_title(title), date
+
+
+def wp_set_youtube_meta(env, post_id, youtube_id, title="", date=""):
+    """Upiše YouTube ID (+ naslov i datum za VideoObject schema) u post meta.
+    Treba WP_USER + WP_APP_PASSWORD (isti korisnik kao generate_post.py)."""
     token = base64.b64encode(f"{env['WP_USER']}:{env['WP_APP_PASSWORD']}".encode()).decode()
-    body = json.dumps({"meta": {YT_META_KEY: youtube_id}}).encode()
+    meta = {YT_META_KEY: youtube_id}
+    if title:
+        meta[YT_TITLE_META_KEY] = title
+    if date:
+        meta[YT_DATE_META_KEY] = date
+    body = json.dumps({"meta": meta}).encode()
     status, resp = http_request(
         "POST", f"{env['WP_URL']}/wp-json/wp/v2/posts/{post_id}",
         headers={"Authorization": f"Basic {token}", "Content-Type": "application/json"},
@@ -969,6 +999,11 @@ def wp_set_youtube_meta(env, post_id, youtube_id):
     return status
 
 
+# 2 = uz ID se šalju i naslov + datum za VideoObject schema. Zapisi s nižom
+# verzijom (ili bez nje) backfill ponovno obrađuje.
+EMBED_VERSION = 2
+
+
 def embed_short(env, entry):
     """Best-effort: postavi embed za jedan videos.json zapis. Vraća razlog
     preskakanja ili None ako je embed postavljen. Nikad ne ruši run."""
@@ -977,15 +1012,18 @@ def embed_short(env, entry):
         return "nema youtube_id/post_id"
     if not yt_is_embeddable(yid):
         return "video nije javan (privatan ili obrisan)"
-    retry(lambda: wp_set_youtube_meta(env, entry["post_id"], yid), what="WP meta (youtube_id)")
+    title, date = video_meta_for(entry)
+    retry(lambda: wp_set_youtube_meta(env, entry["post_id"], yid, title, date),
+          what="WP meta (youtube_id)")
     entry["embedded"] = True
+    entry["embed_v"] = EMBED_VERSION
     return None
 
 
 def backfill_embeds(env, state):
     done, skipped = 0, []
     for entry in state:
-        if entry.get("embedded") or entry.get("status") != "uploaded":
+        if entry.get("embed_v", 0) >= EMBED_VERSION or entry.get("status") != "uploaded":
             continue
         try:
             reason = embed_short(env, entry)
@@ -1133,6 +1171,7 @@ def main():
         "status": "uploaded" if youtube_id else "rendered",
         "video": str(final_path.relative_to(PROJECT_DIR)),
         "youtube_id": youtube_id,
+        "yt_title": meta["yt_title"],
         "created": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
     # Embed na stranici članka. Best-effort: video je već na YouTubeu, pa pad
