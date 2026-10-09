@@ -87,7 +87,7 @@ class VideoMetaTests(unittest.TestCase):
             self.assertIsNone(gv.embed_short(ENV, entry))
         self.assertEqual(sent[-1]["meta"], {gv.YT_META_KEY: "abcdefghijk",
                                             gv.YT_TITLE_META_KEY: "Why Dogs Yawn",
-                                            gv.YT_DATE_META_KEY: "2026-09-30"})
+                                            gv.YT_DATE_META_KEY: "2026-09-30T12:31:05+00:00"})
         self.assertEqual(entry["embed_v"], gv.EMBED_VERSION)
 
     def test_title_from_sidecar_when_missing_in_state(self):
@@ -97,6 +97,19 @@ class VideoMetaTests(unittest.TestCase):
             (Path(d) / "s" / "s.json").write_text(json.dumps({"yt_title": "Crate Tips #shorts"}))
             with mock.patch.object(gv, "OUTPUT_DIR", Path(d)):
                 self.assertEqual(gv.video_meta_for({"slug": "s", "created": "bad"}), ("Crate Tips", ""))
+
+    def test_date_only_or_missing_created_gives_no_date(self):
+        with mock.patch.object(gv, "OUTPUT_DIR", Path("/nonexistent")):
+            self.assertEqual(gv.video_meta_for({"slug": "s", "yt_title": "T", "created": "2026-09-30"}), ("T", ""))
+            self.assertEqual(gv.video_meta_for({"slug": "s", "yt_title": "T"}), ("T", ""))
+
+    def test_v2_embeds_are_reprocessed_by_backfill(self):
+        state = [{"slug": "v2", "post_id": 1, "youtube_id": "aaaaaaaaaaa", "status": "uploaded",
+                  "embedded": True, "embed_v": 2}]
+        with mock.patch.object(gv, "embed_short", return_value=None) as emb, \
+                mock.patch.object(gv, "save_state"):
+            gv.backfill_embeds(ENV, state)
+        emb.assert_called_once()
 
     def test_old_embeds_are_reprocessed_by_backfill(self):
         state = [{"slug": "old", "post_id": 1, "youtube_id": "aaaaaaaaaaa", "status": "uploaded", "embedded": True}]
