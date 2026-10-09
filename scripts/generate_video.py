@@ -26,6 +26,7 @@ ffmpeg + ffprobe na PATH-u (ili FFMPEG_BIN/FFPROBE_BIN u .env-u).
 """
 import argparse
 import asyncio
+import base64
 import io
 import json
 import os
@@ -934,6 +935,74 @@ DRY_RUN_POST = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Short na stranici članka (meta thedoghabit_youtube_id, wp/mu-plugins/thedoghabit-short-embed.php)
+# ---------------------------------------------------------------------------
+
+YT_META_KEY = "thedoghabit_youtube_id"
+
+
+def yt_is_embeddable(youtube_id):
+    """True ako je video javan ili unlisted (oEmbed vraća 200). Privatni ili
+    obrisani video vraća 401/403/404 — takav embed bi na stranici bio prazan."""
+    url = ("https://www.youtube.com/oembed?format=json&url="
+           + urllib.parse.quote(f"https://www.youtube.com/shorts/{youtube_id}", safe=""))
+    try:
+        status, _ = http_request("GET", url, timeout=15)
+        return status == 200
+    except urllib.error.HTTPError:
+        return False
+
+
+def wp_set_youtube_meta(env, post_id, youtube_id):
+    """Upiše YouTube ID u post meta. Treba WP_USER + WP_APP_PASSWORD (isti
+    korisnik kao generate_post.py)."""
+    token = base64.b64encode(f"{env['WP_USER']}:{env['WP_APP_PASSWORD']}".encode()).decode()
+    body = json.dumps({"meta": {YT_META_KEY: youtube_id}}).encode()
+    status, resp = http_request(
+        "POST", f"{env['WP_URL']}/wp-json/wp/v2/posts/{post_id}",
+        headers={"Authorization": f"Basic {token}", "Content-Type": "application/json"},
+        data=body, timeout=30)
+    saved = (json.loads(resp).get("meta") or {}).get(YT_META_KEY)
+    if saved != youtube_id:
+        raise RuntimeError(f"WP nije spremio {YT_META_KEY} za post {post_id} (vraćeno: {saved!r})")
+    return status
+
+
+def embed_short(env, entry):
+    """Best-effort: postavi embed za jedan videos.json zapis. Vraća razlog
+    preskakanja ili None ako je embed postavljen. Nikad ne ruši run."""
+    yid = entry.get("youtube_id")
+    if not yid or not entry.get("post_id"):
+        return "nema youtube_id/post_id"
+    if not yt_is_embeddable(yid):
+        return "video nije javan (privatan ili obrisan)"
+    retry(lambda: wp_set_youtube_meta(env, entry["post_id"], yid), what="WP meta (youtube_id)")
+    entry["embedded"] = True
+    return None
+
+
+def backfill_embeds(env, state):
+    done, skipped = 0, []
+    for entry in state:
+        if entry.get("embedded") or entry.get("status") != "uploaded":
+            continue
+        try:
+            reason = embed_short(env, entry)
+        except Exception as e:  # jedan loš zapis ne smije zaustaviti ostale
+            reason = f"greška: {e}"
+        if reason:
+            skipped.append((entry.get("slug"), reason))
+        else:
+            done += 1
+            log(f"  embed: {entry['slug']} -> {entry['youtube_id']}")
+    save_state(state)
+    log(f"Backfill gotov: {done} postavljeno, {len(skipped)} preskočeno.")
+    for slug, reason in skipped:
+        log(f"  preskočeno {slug}: {reason}")
+    return done, skipped
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generiraj YouTube Short iz thedoghabit.com posta")
     parser.add_argument("--dry-run", action="store_true",
@@ -941,6 +1010,8 @@ def main():
     parser.add_argument("--post-slug", help="obradi točno ovaj WP slug (i ako već ima video)")
     parser.add_argument("--upload", action="store_true",
                         help="uploadaj na YouTube (YT_* varovi u .env-u; default privacy 'private')")
+    parser.add_argument("--backfill-embeds", action="store_true",
+                        help="postavi Short embed na sve članke čiji je video već uploadan (videos.json)")
     parser.add_argument("--yt-auth", action="store_true",
                         help="jednokratni OAuth flow — ispiše YT_REFRESH_TOKEN za .env")
     args = parser.parse_args()
@@ -952,6 +1023,10 @@ def main():
         return
 
     state = load_state()
+
+    if args.backfill_embeds:
+        backfill_embeds(env, state)
+        return
 
     if args.dry_run:
         post = DRY_RUN_POST
@@ -1052,18 +1127,30 @@ def main():
         return
 
     state = [v for v in state if v["slug"] != slug]
-    state.append({
+    entry = {
         "slug": slug,
         "post_id": post["id"],
         "status": "uploaded" if youtube_id else "rendered",
         "video": str(final_path.relative_to(PROJECT_DIR)),
         "youtube_id": youtube_id,
         "created": time.strftime("%Y-%m-%d %H:%M:%S"),
-    })
+    }
+    # Embed na stranici članka. Best-effort: video je već na YouTubeu, pa pad
+    # ovdje ne smije označiti run kao neuspjeh — --backfill-embeds ga nadoknadi.
+    embed_note = ""
+    if youtube_id:
+        try:
+            reason = embed_short(env, entry)
+            embed_note = "\nEmbed na članku: " + ("postavljen" if not reason else f"NIJE ({reason})")
+        except Exception as e:
+            embed_note = f"\nEmbed na članku: NIJE (greška: {e}) — pokreni --backfill-embeds"
+        log(embed_note.strip())
+    state.append(entry)
     save_state(state)
     alert = (f"Video spreman: '{post_title}'"
              + (f"\nYT: https://youtu.be/{youtube_id}" if youtube_id else
                 f" → {final_path.name} (čeka ručni upload)"))
+    alert += embed_note
     if meta.get("pinned_comment"):
         alert += f"\n\n\U0001F4CC Prijedlog pina:\n{meta['pinned_comment']}"
     send_alert(alert, env)

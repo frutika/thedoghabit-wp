@@ -19,6 +19,7 @@ import json
 import mimetypes
 import os
 import random
+import re
 import socket
 import sys
 import time
@@ -153,6 +154,21 @@ def retry(fn, attempts=3, base_delay=2, what=""):
             if attempt < attempts:
                 time.sleep(base_delay * attempt)
     raise RuntimeError(f"'{what}' nije uspio nakon {attempts} pokušaja: {last_err}")
+
+
+# Tvrdnje o vlastitom testiranju koje pipeline ne može ispuniti ("Tested",
+# "We Tried"...). AdSense je 10/2026 odbio stranicu kao sadržaj niske vrijednosti,
+# a takva tvrdnja bez stvarnog testiranja je i obmanjujuća za čitatelja.
+UNEARNED_CLAIMS = [
+    (re.compile(r"\b(?:we|i)\s+(?:tested|tried)\b", re.I), "Compared"),
+    (re.compile(r"\b(?:hands-on|tried and tested|tested)\b", re.I), "Compared"),
+]
+
+
+def strip_unearned_claims(text):
+    for pattern, repl in UNEARNED_CLAIMS:
+        text = pattern.sub(repl, text)
+    return re.sub(r"\s{2,}", " ", text).strip()
 
 
 def call_lumenta(topic, env, dry_run):
@@ -329,6 +345,7 @@ def refill_topics(topics, env, dry_run):
     for nt in new_topics:
         title = (nt.get("title_seed") or nt.get("title") or "").strip()
         category = nt.get("category")
+        title = strip_unearned_claims(title)
         if not title or title.lower() in existing_lower or category not in CATEGORY_NAMES:
             continue
         topics.append({
@@ -654,6 +671,7 @@ def main():
         for key in ("title", "meta_title", "meta_description"):
             if article.get(key):
                 article[key] = article[key].replace('"', "'").replace("\n", " ").strip()
+                article[key] = strip_unearned_claims(article[key])
 
         slug = article["slug"] or slugify(article["title"])
 
