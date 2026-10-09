@@ -135,8 +135,10 @@ add_filter( 'wp_robots', function ( $robots ) {
 } );
 
 // Izbaci iz sitemapa: Rank Math i core WP sitemap.
+// Rank Math XML sitemap ovdje šalje sirov redak iz $wpdb (stdClass), ne WP_Post,
+// pa se provjerava preko ID-ja.
 add_filter( 'rank_math/sitemap/entry', function ( $url, $type, $object ) {
-	if ( 'post' === $type && $object instanceof WP_Post && thedoghabit_is_noindexed( $object ) ) {
+	if ( 'post' === $type && is_object( $object ) && ! empty( $object->ID ) && thedoghabit_is_noindexed( (int) $object->ID ) ) {
 		return false;
 	}
 	return $url;
