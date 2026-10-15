@@ -21,7 +21,7 @@ dok aplikacija nije verificirana, uploadi preko API-ja ostaju locked private.
 --dry-run: mock post + mock skripta + placeholder slike, ali PRAVI edge-tts i
 ffmpeg — proizvede stvarni MP4 za provjeru montaže bez ijednog API ključa.
 
-Vanjske ovisnosti: Pillow (već na hostu), edge-tts (pip install edge-tts),
+Vanjske ovisnosti: Pillow (već na hostu), edge-tts >= 7.3 (pip install -U edge-tts),
 ffmpeg + ffprobe na PATH-u (ili FFMPEG_BIN/FFPROBE_BIN u .env-u).
 """
 import argparse
@@ -538,13 +538,25 @@ def build_description(yt_description, post_link):
 # edge-tts — voiceover + word timestampovi
 # ---------------------------------------------------------------------------
 
+EDGE_TTS_MIN_VERSION = (7, 3)
+EDGE_TTS_ATTEMPTS = 3
+
+
 def synthesize_voice(text, out_path, env):
     """Vrati listu {start, end, text} po riječi (sekunde). edge-tts šalje
     WordBoundary evente uz audio stream; offset/duration su u 100 ns tickovima."""
     try:
         import edge_tts
     except ImportError:
-        raise RuntimeError("edge-tts nije instaliran — pokreni: pip install edge-tts")
+        raise RuntimeError("edge-tts nije instaliran — pokreni: pip install -U edge-tts")
+
+    # Microsoft je promijenio Sec-MS-GEC token (verzija "2-..."); starije
+    # verzije edge-tts (<= 7.2.x, šalju "1-...") dobivaju 403 na websocketu.
+    installed = getattr(edge_tts, "__version__", "0")
+    if tuple(int(p) for p in re.findall(r"\d+", installed)[:2]) < EDGE_TTS_MIN_VERSION:
+        raise RuntimeError(
+            f"edge-tts {installed} je prestar (Microsoft vraća 403) — pokreni: "
+            f"pip install -U 'edge-tts>={'.'.join(map(str, EDGE_TTS_MIN_VERSION))}'")
 
     voice = env.get("EDGE_TTS_VOICE") or "en-US-AndrewMultilingualNeural"
     words = []
@@ -564,7 +576,20 @@ def synthesize_voice(text, out_path, env):
                         "text": chunk["text"],
                     })
 
-    asyncio.run(run())
+    # Neslužbeni endpoint povremeno odbije zahtjev (403/429/reset) —
+    # par pokušaja s backoffom prije nego što cijeli video padne.
+    for attempt in range(1, EDGE_TTS_ATTEMPTS + 1):
+        words.clear()
+        try:
+            asyncio.run(run())
+            break
+        except Exception as e:
+            if attempt == EDGE_TTS_ATTEMPTS:
+                raise
+            wait = 5 * attempt
+            print(f"edge-tts pokušaj {attempt}/{EDGE_TTS_ATTEMPTS} pao ({e}); "
+                  f"ponovno za {wait} s", file=sys.stderr)
+            time.sleep(wait)
     if not words:
         raise RuntimeError("edge-tts nije vratio word boundary evente — provjeri glas/tekst.")
     return words
