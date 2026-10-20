@@ -103,7 +103,8 @@ class GetValidScriptTest(unittest.TestCase):
     def run_with(self, *outputs):
         calls = []
 
-        def fake(post_title, article_text, breed, env, dry_run, retry_reason=None):
+        def fake(post_title, article_text, breed, env, dry_run, retry_reason=None,
+                 target_seconds=None):
             calls.append(retry_reason)
             return copy.deepcopy(outputs[len(calls) - 1])
 
