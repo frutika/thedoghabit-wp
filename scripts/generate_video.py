@@ -18,6 +18,16 @@ redirect na 127.0.0.1:8765 i ispiše YT_REFRESH_TOKEN za .env. Prije toga u
 Google Cloud konzoli treba OAuth client (Desktop app) s YouTube Data API v3;
 dok aplikacija nije verificirana, uploadi preko API-ja ostaju locked private.
 
+--own-clip <snimka.mp4> --post-slug <slug> --clip-note "<što se vidi>": vlastita,
+već izrezana snimka (8-59 s) umjesto Pexelsa. Lumenta piše naraciju za tu snimku
+(opis iz --clip-note, broj riječi iz trajanja), edge-tts glas + titlovi idu preko
+nje, originalni zvuk tiho ispod (--clip-audio-volume, 0 = bez). Dalje isto kao
+stock: sidecar JSON, --upload, embed na članku; stari Short istog članka ostaje
+zapisan kao replaced_youtube_id. Primjer:
+  python3 scripts/generate_video.py --own-clip ~/tery-sljunak.mp4 \
+    --post-slug why-dog-sniffing-walks --upload \
+    --clip-note "Tery, our Jack Russell puppy, first time on a pebble beach, sniffing everything"
+
 --dry-run: mock post + mock skripta + placeholder slike, ali PRAVI edge-tts i
 ffmpeg — proizvede stvarni MP4 za provjeru montaže bez ijednog API ključa.
 
@@ -31,6 +41,7 @@ import io
 import json
 import os
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -354,7 +365,8 @@ def pick_breed(post_title, slug, state, env=None):
     return JACK_RUSSELL_BREED
 
 
-def call_lumenta_script(post_title, article_text, breed, env, dry_run, retry_reason=None):
+def call_lumenta_script(post_title, article_text, breed, env, dry_run, retry_reason=None,
+                        target_seconds=None):
     """Skripta za Short: segments[] gdje je prvi hook a zadnji CTA, svaki sa
     svojim image_promptom. NAPOMENA: tool 'short_video_script' mora postojati
     na Lumenta internom endpointu (isti auth kao seo_blog_post)."""
@@ -382,7 +394,7 @@ def call_lumenta_script(post_title, article_text, breed, env, dry_run, retry_rea
             "input": {
                 "topic": post_title,
                 "article_text": article_text,
-                "target_seconds": TARGET_SECONDS,
+                "target_seconds": target_seconds or TARGET_SECONDS,
                 "audience": "dog owners, global, English-speaking",
                 "language": "en",
                 "breed": breed,
@@ -450,16 +462,19 @@ def count_words(text):
     return len(text.split())
 
 
-def script_violations(script):
-    """Kršenja pragova (lista opisa); prazna lista = skripta prolazi."""
+def script_violations(script, max_words=None):
+    """Kršenja pragova (lista opisa); prazna lista = skripta prolazi.
+    max_words: gornja granica riječi naracije (default SCRIPT_MAX_WORDS); kod
+    vlastite snimke ide iz trajanja snimke (own_clip_max_words)."""
+    max_words = max_words or SCRIPT_MAX_WORDS
     problems = []
     segments = script.get("segments") or []
     n = len(segments)
     if not SCRIPT_MIN_SEGMENTS <= n <= SCRIPT_MAX_SEGMENTS:
         problems.append(f"{n} segmenata (dozvoljeno {SCRIPT_MIN_SEGMENTS}-{SCRIPT_MAX_SEGMENTS})")
     total = sum(count_words(s.get("text", "")) for s in segments)
-    if total > SCRIPT_MAX_WORDS:
-        problems.append(f"{total} riječi naracije (max {SCRIPT_MAX_WORDS})")
+    if total > max_words:
+        problems.append(f"{total} riječi naracije (max {max_words})")
     if segments:
         hook = count_words(segments[0].get("text", ""))
         if hook > SCRIPT_MAX_HOOK_WORDS:
@@ -472,7 +487,7 @@ def script_violations(script):
     return problems
 
 
-def validate_script(script):
+def validate_script(script, max_words=None):
     """Čisti skriptu na mjestu i provjerava pragove. Diže ScriptValidationError
     za Lumenta {"error": ...} (bez retryja — isti input daje istu grešku) i
     ValueError s popisom kršenja kad pragovi padnu (pozivatelj radi retry)."""
@@ -493,25 +508,29 @@ def validate_script(script):
             seg["image_prompt"] = prompt
     script["segments"] = segments
 
-    problems = script_violations(script)
+    problems = script_violations(script, max_words)
     if problems:
         raise ValueError("; ".join(problems))
     return script
 
 
-def get_valid_script(post_title, article_text, breed, env, dry_run):
+def get_valid_script(post_title, article_text, breed, env, dry_run,
+                     max_words=None, target_seconds=None):
     """Lumenta skripta koja prolazi validate_script, uz JEDAN ponovni poziv
     ako pragovi padnu. Drugi pad = ScriptValidationError: predug video se ne
     renderira (main šalje alert i izlazi s 1)."""
-    script = call_lumenta_script(post_title, article_text, breed, env, dry_run)
+    call = lambda reason=None: call_lumenta_script(  # noqa: E731
+        post_title, article_text, breed, env, dry_run,
+        retry_reason=reason, target_seconds=target_seconds)
+    script = call()
     try:
-        return validate_script(script)
+        return validate_script(script, max_words)
     except ValueError as e:
         reason = str(e)
         log(f"  validacija: skripta ne prolazi ({reason}) — jedan ponovni poziv Lumente")
-    script = call_lumenta_script(post_title, article_text, breed, env, dry_run, retry_reason=reason)
+    script = call(reason)
     try:
-        return validate_script(script)
+        return validate_script(script, max_words)
     except ValueError as e:
         raise ScriptValidationError(f"skripta ni u drugom pokušaju ne prolazi validaciju: {e}")
 
@@ -819,6 +838,88 @@ def assemble_video(segment_names, workdir, slug, env):
 
 
 # ---------------------------------------------------------------------------
+# Vlastita snimka (--own-clip) — prava snimka psa umjesto Pexels klipova
+# ---------------------------------------------------------------------------
+# Zašto: AdSense je odbio web zbog "sadržaja niske vrijednosti"; vlastite snimke
+# (Tery) su jedini sadržaj koji AI/stock ne može proizvesti. Snimka se reže
+# ručno (bez praznih kadrova); pipeline dodaje samo naraciju, titlove, opis,
+# upload i embed na članku — isti put kao Pexels video.
+
+WORDS_PER_SECOND = 2.7          # izmjereni edge-tts tempo (vidi SCRIPT_MAX_WORDS)
+OWN_CLIP_MIN_SECONDS = 8
+OWN_CLIP_MAX_SECONDS = 59       # Shorts limit je 60 s (s tpad zrakom na kraju)
+OWN_CLIP_AUDIO_VOLUME = 0.15    # originalni zvuk snimke tiho ispod naracije
+
+
+def probe_clip(path, env):
+    """(trajanje u s, ima_audio) za vlastitu snimku."""
+    out = run_cmd([env.get("FFPROBE_BIN") or "ffprobe", "-v", "error",
+                   "-show_entries", "format=duration:stream=codec_type",
+                   "-of", "json", path.name],
+                  cwd=path.parent, what="ffprobe own clip")
+    info = json.loads(out.decode())
+    duration = float(info["format"]["duration"])
+    has_audio = any(s.get("codec_type") == "audio" for s in info.get("streams") or [])
+    return duration, has_audio
+
+
+def own_clip_max_words(duration):
+    """Gornja granica riječi naracije da glas stane u snimku (~0,5 s zraka).
+    Nikad iznad SCRIPT_MAX_WORDS — ista retencijska logika kao kod stocka."""
+    return max(10, min(SCRIPT_MAX_WORDS, int((duration - 0.5) * WORDS_PER_SECOND)))
+
+
+def own_clip_article_text(article_text, note, duration):
+    """Lumenta ne vidi snimku i tiho ignorira nepoznata polja, pa opis snimke
+    ide na početak article_text. Bez ovoga skripta opisuje generičnog psa, a
+    naracija mora pratiti ono što se na snimci stvarno vidi."""
+    header = (
+        f"VIDEO FOOTAGE ({duration:.0f} s, real footage of our own dog, not stock): "
+        f"{note.strip()}\n"
+        "Write the narration for THIS footage: talk about what the viewer sees, "
+        "then one practical takeaway from the article below. Do not describe "
+        "scenes that are not in the footage. Image prompts are ignored.\n\n"
+        "ARTICLE:\n")
+    return header + article_text
+
+
+def render_own_clip(clip_name, total_audio, workdir, slug, env, clip_volume):
+    """Snimka -> finalni 9:16 MP4 s naracijom i titlovima. Ako je naracija
+    dulja od snimke, zadnji kadar se zamrzne (tpad); originalni zvuk ide tiho
+    ispod glasa (clip_volume 0 = bez njega)."""
+    ffmpeg = env.get("FFMPEG_BIN") or "ffmpeg"
+    clip_dur, has_audio = probe_clip(workdir / clip_name, env)
+    out_dur = max(clip_dur, total_audio + 0.5)
+    pad = out_dur - clip_dur
+
+    vf = (f"scale={VIDEO_W}:{VIDEO_H}:force_original_aspect_ratio=increase,"
+          f"crop={VIDEO_W}:{VIDEO_H},fps={FPS},setsar=1")
+    if pad > 0.05:
+        vf += f",tpad=stop_mode=clone:stop_duration={pad:.2f}"
+    vf += ",ass=subs.ass"
+
+    if has_audio and clip_volume > 0:
+        # amix dijeli svaki ulaz s brojem ulaza; volume=2 to vraća (radi i na
+        # starijem ffmpegu bez amix normalize=0).
+        af = (f"[0:a]volume={clip_volume}[bg];"
+              f"[bg][1:a]amix=inputs=2:duration=longest:dropout_transition=0,volume=2[a]")
+    else:
+        af = "[1:a]apad[a]"
+
+    final_name = f"{slug}.mp4"
+    run_cmd([ffmpeg, "-y", "-i", clip_name, "-i", "voice.mp3",
+             "-filter_complex", f"[0:v]{vf}[v];{af}",
+             "-map", "[v]", "-map", "[a]", "-t", f"{out_dur:.2f}",
+             "-c:v", "libx264", "-preset", "medium", "-crf", "21",
+             "-pix_fmt", "yuv420p",
+             "-c:a", "aac", "-b:a", "192k",
+             "-movflags", "+faststart",
+             final_name],
+            cwd=workdir, what="ffmpeg own clip render")
+    return workdir / final_name
+
+
+# ---------------------------------------------------------------------------
 # YouTube Data API v3 — OAuth + upload
 # ---------------------------------------------------------------------------
 
@@ -1081,7 +1182,21 @@ def main():
                         help="postavi Short embed na sve članke čiji je video već uploadan (videos.json)")
     parser.add_argument("--yt-auth", action="store_true",
                         help="jednokratni OAuth flow — ispiše YT_REFRESH_TOKEN za .env")
+    parser.add_argument("--own-clip", type=Path,
+                        help="vlastita (već izrezana) snimka umjesto Pexels klipova; traži --post-slug i --clip-note")
+    parser.add_argument("--clip-note",
+                        help="što se vidi na snimci, npr. 'Tery, JRT puppy, first time on a pebble beach, sniffing everything'")
+    parser.add_argument("--clip-audio-volume", type=float, default=OWN_CLIP_AUDIO_VOLUME,
+                        help=f"glasnoća originalnog zvuka snimke ispod naracije (0-1, default {OWN_CLIP_AUDIO_VOLUME})")
     args = parser.parse_args()
+
+    if args.own_clip:
+        if not args.dry_run and not args.post_slug:
+            parser.error("--own-clip traži --post-slug (članak na koji video vodi i gdje se ugrađuje)")
+        if not (args.clip_note or "").strip():
+            parser.error("--own-clip traži --clip-note (Lumenta ne vidi snimku)")
+        if not args.own_clip.is_file():
+            parser.error(f"--own-clip: datoteka ne postoji: {args.own_clip}")
 
     env = load_env(ENV_PATH)
 
@@ -1114,7 +1229,21 @@ def main():
         article_text = strip_html(post["content"]["rendered"])
         breed = pick_breed(post_title, slug, state, env)
         log(f"  pasmina za ovaj video: {breed}")
-        script = get_valid_script(post_title, article_text, breed, env, args.dry_run)
+        max_words = target_seconds = None
+        if args.own_clip:
+            # Kopija u workdir: ffmpeg radi s relativnim imenima (vidi assemble_video).
+            clip_name = "source" + (args.own_clip.suffix.lower() or ".mp4")
+            shutil.copyfile(args.own_clip, workdir / clip_name)
+            clip_dur, _ = probe_clip(workdir / clip_name, env)
+            if not OWN_CLIP_MIN_SECONDS <= clip_dur <= OWN_CLIP_MAX_SECONDS:
+                raise RuntimeError(f"snimka traje {clip_dur:.1f} s "
+                                   f"(dozvoljeno {OWN_CLIP_MIN_SECONDS}-{OWN_CLIP_MAX_SECONDS} s)")
+            max_words = own_clip_max_words(clip_dur)
+            target_seconds = round(clip_dur)
+            article_text = own_clip_article_text(article_text, args.clip_note, clip_dur)
+            log(f"  vlastita snimka: {args.own_clip.name}, {clip_dur:.1f} s, max {max_words} riječi")
+        script = get_valid_script(post_title, article_text, breed, env, args.dry_run,
+                                  max_words=max_words, target_seconds=target_seconds)
         segments = script["segments"]
         # Cijela skripta (s image promptovima) uz video — bez ovoga se promptovi
         # gube pa se slike ne mogu ciljano popraviti/regenerirati naknadno.
@@ -1129,37 +1258,11 @@ def main():
 
         build_ass(words, workdir / "subs.ass")
 
-        segment_names = []
-        durations = allocate_durations(segments, total_audio + 0.5)
-        # Video klipovi umjesto statičnih slika: pas koji se kreće u prve dvije
-        # sekunde zaustavlja skrolanje, Ken Burns zoom preko fotke ne.
-        # VIDEO_CLIPS=0 u .env-u vraća samo slike. Klip je best-effort: ako
-        # search/download/render padne, segment pada natrag na sliku.
-        use_clips = env.get("VIDEO_CLIPS", "1") != "0" and not args.dry_run
-        clip_count = 0
-        for i, (seg, dur) in enumerate(zip(segments, durations)):
-            seg_name = f"seg_{i}.mp4"
-            kind = "slika"
-            if use_clips:
-                try:
-                    clip_name = f"clip_{i}.mp4"
-                    (workdir / clip_name).write_bytes(call_pexels_video(seg["image_prompt"], env))
-                    render_clip_segment(clip_name, dur, seg_name, workdir, env)
-                    kind = "klip"
-                    clip_count += 1
-                except Exception as e:
-                    log(f"  segment {i + 1}: klip nije uspio ({e}) — koristim sliku")
-            if kind == "slika":
-                img_bytes = fetch_segment_image(seg["image_prompt"], env, args.dry_run)
-                img_name = f"img_{i}.jpg"
-                (workdir / img_name).write_bytes(process_image_vertical(img_bytes))
-                render_segment(img_name, dur, seg_name, workdir, env)
-            segment_names.append(seg_name)
-            log(f"  segment {i + 1}/{len(segments)}: {dur:.1f} s ({kind})")
-        if use_clips:
-            log(f"  klipova: {clip_count}/{len(segments)}")
-
-        final_path = assemble_video(segment_names, workdir, slug, env)
+        if args.own_clip:
+            final_path = render_own_clip(clip_name, total_audio, workdir, slug, env,
+                                         args.clip_audio_volume)
+        else:
+            final_path = render_stock_video(segments, total_audio, workdir, slug, env, args.dry_run)
         size_mb = final_path.stat().st_size / 1024 / 1024
         log(f"Video renderiran: {final_path} ({size_mb:.1f} MB)")
 
@@ -1174,6 +1277,7 @@ def main():
             # pa ide u sidecar za ručni copy-paste pri objavi.
             "pinned_comment": script.get("pinned_comment") or "",
             "video": final_path.name,
+            "source": "own_clip" if args.own_clip else "stock",
         }
         (workdir / f"{slug}.json").write_text(
             json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -1189,10 +1293,50 @@ def main():
         send_alert(f"GREŠKA — video NIJE dovršen ('{post_title}'): {e}", env)
         sys.exit(1)
 
-    if args.dry_run:
+    finish_run(env, state, post, post_title, slug, final_path, meta, youtube_id, args.dry_run)
+
+
+def render_stock_video(segments, total_audio, workdir, slug, env, dry_run):
+    """Pexels klipovi (fallback slike) po segmentu + naracija -> finalni MP4."""
+    segment_names = []
+    durations = allocate_durations(segments, total_audio + 0.5)
+    # Video klipovi umjesto statičnih slika: pas koji se kreće u prve dvije
+    # sekunde zaustavlja skrolanje, Ken Burns zoom preko fotke ne.
+    # VIDEO_CLIPS=0 u .env-u vraća samo slike. Klip je best-effort: ako
+    # search/download/render padne, segment pada natrag na sliku.
+    use_clips = env.get("VIDEO_CLIPS", "1") != "0" and not dry_run
+    clip_count = 0
+    for i, (seg, dur) in enumerate(zip(segments, durations)):
+        seg_name = f"seg_{i}.mp4"
+        kind = "slika"
+        if use_clips:
+            try:
+                clip_name = f"clip_{i}.mp4"
+                (workdir / clip_name).write_bytes(call_pexels_video(seg["image_prompt"], env))
+                render_clip_segment(clip_name, dur, seg_name, workdir, env)
+                kind = "klip"
+                clip_count += 1
+            except Exception as e:
+                log(f"  segment {i + 1}: klip nije uspio ({e}) — koristim sliku")
+        if kind == "slika":
+            img_bytes = fetch_segment_image(seg["image_prompt"], env, dry_run)
+            img_name = f"img_{i}.jpg"
+            (workdir / img_name).write_bytes(process_image_vertical(img_bytes))
+            render_segment(img_name, dur, seg_name, workdir, env)
+        segment_names.append(seg_name)
+        log(f"  segment {i + 1}/{len(segments)}: {dur:.1f} s ({kind})")
+    if use_clips:
+        log(f"  klipova: {clip_count}/{len(segments)}")
+    return assemble_video(segment_names, workdir, slug, env)
+
+
+def finish_run(env, state, post, post_title, slug, final_path, meta, youtube_id, dry_run):
+    """State (videos.json), embed na članku i alert nakon uspješnog rendera."""
+    if dry_run:
         log("[dry-run] state NIJE ažuriran — videos.json netaknut.")
         return
 
+    previous = next((v for v in state if v["slug"] == slug), None)
     state = [v for v in state if v["slug"] != slug]
     entry = {
         "slug": slug,
@@ -1201,8 +1345,13 @@ def main():
         "video": str(final_path.relative_to(PROJECT_DIR)),
         "youtube_id": youtube_id,
         "yt_title": meta["yt_title"],
+        "source": meta.get("source", "stock"),
         "created": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
     }
+    # Vlastita snimka često zamjenjuje stariji stock video istog članka — trag
+    # starog YouTube ID-a ostaje, da se stari Short može ručno skloniti.
+    if previous and previous.get("youtube_id") and previous.get("youtube_id") != youtube_id:
+        entry["replaced_youtube_id"] = previous["youtube_id"]
     # Embed na stranici članka. Best-effort: video je već na YouTubeu, pa pad
     # ovdje ne smije označiti run kao neuspjeh — --backfill-embeds ga nadoknadi.
     embed_note = ""
@@ -1216,8 +1365,11 @@ def main():
     state.append(entry)
     save_state(state)
     alert = (f"Video spreman: '{post_title}'"
+             + (" [vlastita snimka]" if entry["source"] == "own_clip" else "")
              + (f"\nYT: https://youtu.be/{youtube_id}" if youtube_id else
                 f" → {final_path.name} (čeka ručni upload)"))
+    if entry.get("replaced_youtube_id"):
+        alert += f"\nZamijenjen stari Short: https://youtu.be/{entry['replaced_youtube_id']}"
     alert += embed_note
     if meta.get("pinned_comment"):
         alert += f"\n\n\U0001F4CC Prijedlog pina:\n{meta['pinned_comment']}"
