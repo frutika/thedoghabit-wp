@@ -2,5 +2,6 @@
 logs/
 videos/
 silence_alarm_state.json
+video_heartbeat.json
 __pycache__/
 *.pyc

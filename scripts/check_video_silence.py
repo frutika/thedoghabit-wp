@@ -40,8 +40,12 @@ STATE_PATH = PROJECT_DIR / "videos.json"
 ALERT_STATE_PATH = PROJECT_DIR / "silence_alarm_state.json"
 LOG_PATH = PROJECT_DIR / "logs" / "check_video_silence.log"
 
+HEARTBEAT_PATH = PROJECT_DIR / "video_heartbeat.json"
+
 SILENCE_THRESHOLD_HOURS = 48
 RE_ALERT_AFTER_HOURS = 24  # nakon prvog alarma, ponovi tek dnevno dok traje
+# generate_video.py ide jednom dnevno (12:30); 26h = jedan propušteni run + zrak.
+IDLE_FRESH_HOURS = 26
 
 
 def log(msg):
@@ -118,6 +122,25 @@ def last_successful_upload():
         return datetime.strptime(latest["created"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc), None
     except ValueError as e:
         return None, f"najnoviji 'created' zapis se ne parsira ({e})"
+
+
+def last_idle_run():
+    """Kad je generate_video.py zadnji put uspješno zaključio da nema posta za
+    video (video_heartbeat.json). None ako traga nema ili je nečitljiv.
+
+    Blog izlazi pon/sri/pet, a gear postovi ne dobivaju video — razmak od 72h+
+    bez uploada je zato normalan (lažni alarm 26.10.2026.). Tišina se oprašta
+    samo uz SVJEŽ idle trag: ako je trag star, cron ili skripta ne rade, i to
+    je upravo kvar zbog kojeg ovaj watchdog postoji.
+    """
+    if not HEARTBEAT_PATH.exists():
+        return None
+    try:
+        data = json.loads(HEARTBEAT_PATH.read_text())
+        return datetime.strptime(data["idle_at"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        log(f"  {HEARTBEAT_PATH.name} nije čitljiv ({e}) — ignoriram.")
+        return None
 
 
 def load_alert_state():
@@ -206,7 +229,17 @@ def main():
     hours_silent = (datetime.now(timezone.utc) - last).total_seconds() / 3600
     log(f"Zadnji uspješan upload: {last.isoformat()} ({hours_silent:.1f}h unatrag).")
 
-    if hours_silent >= SILENCE_THRESHOLD_HOURS:
+    now = datetime.now(timezone.utc)
+    idle = last_idle_run()
+    idle_fresh = (idle is not None and idle > last
+                  and (now - idle) < timedelta(hours=IDLE_FRESH_HOURS))
+
+    if hours_silent >= SILENCE_THRESHOLD_HOURS and idle_fresh:
+        log(f"  Tišina {hours_silent:.0f}h, ali generate_video.py je {idle.strftime('%Y-%m-%d %H:%M')} UTC "
+            f"uredno javio da nema posta za video — nije kvar, bez alarma.")
+        if ALERT_STATE_PATH.exists():
+            clear_alert_state()
+    elif hours_silent >= SILENCE_THRESHOLD_HOURS:
         maybe_alert(
             f"UPOZORENJE — nema uspješnog video uploada {hours_silent:.0f}h "
             f"(zadnji: {last.strftime('%Y-%m-%d %H:%M')} UTC). Provjeri generate_video_cron.log.",
