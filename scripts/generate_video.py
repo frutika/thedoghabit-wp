@@ -635,6 +635,8 @@ PlayResY: 1920
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: Cap,Arial,88,&H00FFFFFF,&H00FFFFFF,&H00101010,&H64000000,-1,0,0,0,100,100,0,0,1,7,0,2,60,60,640,1
+Style: Hook,Arial,84,&H00FFFFFF,&H00FFFFFF,&H003C64C8,&H00000000,-1,0,0,0,100,100,0,0,3,22,0,8,90,90,300,1
+Style: Tag,Arial,58,&H00101010,&H00101010,&H0000D7FF,&H00000000,-1,0,0,0,100,100,0,0,3,14,0,8,90,90,220,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -648,7 +650,18 @@ def ass_ts(sec):
     return f"{h}:{m:02d}:{s:05.2f}"
 
 
-def build_ass(words, path):
+CAP_HIGHLIGHT = r"{\c&H00D7FF&\fscx108\fscy108}"   # žuta + blagi "pop" za riječ koja se izgovara
+
+
+def ass_text(text):
+    """Slobodan tekst (naslov) siguran za ASS: bez override zagrada i \\N trikova."""
+    return re.sub(r"[{}\\]", "", text).strip()
+
+
+def build_ass(words, path, overlays=None):
+    """Titlovi u grupicama ≤3 riječi, s trenutno izgovorenom riječi istaknutom
+    (karaoke) — oko prati riječ, što drži pažnju bolje od statičnog bloka.
+    overlays: [(start, end, style, text)] — hook naslov, Tery oznaka."""
     chunks = []
     current = []
     for w in words:
@@ -663,8 +676,18 @@ def build_ass(words, path):
     for i, ch in enumerate(chunks):
         start = ch[0]["start"]
         end = chunks[i + 1][0]["start"] if i + 1 < len(chunks) else ch[-1]["end"] + 0.4
-        text = " ".join(w["text"] for w in ch).upper()
-        events.append(f"Dialogue: 0,{ass_ts(start)},{ass_ts(end)},Cap,,0,0,0,,{text}")
+        texts = [ass_text(w["text"]).upper() for w in ch]
+        for j in range(len(ch)):
+            w_start = start if j == 0 else ch[j]["start"]
+            w_end = ch[j + 1]["start"] if j + 1 < len(ch) else end
+            if w_end <= w_start:
+                continue
+            line = " ".join(CAP_HIGHLIGHT + t + r"{\r}" if k == j else t
+                            for k, t in enumerate(texts))
+            events.append(f"Dialogue: 0,{ass_ts(w_start)},{ass_ts(w_end)},Cap,,0,0,0,,{line}")
+
+    for o_start, o_end, style, text in overlays or []:
+        events.append(f"Dialogue: 1,{ass_ts(o_start)},{ass_ts(o_end)},{style},,0,0,0,,{ass_text(text)}")
 
     path.write_text(ASS_HEADER + "\n".join(events) + "\n", encoding="utf-8")
 
@@ -750,6 +773,106 @@ def render_clip_segment(clip_name, duration, out_name, workdir, env):
             cwd=workdir, what=f"ffmpeg clip segment {out_name}")
 
 
+# ---------------------------------------------------------------------------
+# Tery tretman — prava snimka štenca u stock videu + glazba + hook naslov
+# ---------------------------------------------------------------------------
+# Zašto: kanal 27.8.–25.10.2026. — Tery Shortsi (prava snimka) drže 95–135 %
+# prosječno odgledanog i donose pretplate, stock Shortsi ~40–65 % i skoro
+# nijednu. Svaki video zato završava Teryjem koji gleda u kameru (CTA), a
+# srednji segment čija se slika poklapa s nekom Tery kategorijom dobiva
+# Tery klip umjesto Pexelsa (najviše jedan). Sve je best-effort: bez
+# assets/tery ili assets/music pipeline radi kao prije.
+
+TERY_DIR = PROJECT_DIR / "assets" / "tery"       # <kategorija>__<opis>_NN.mp4, 9:16
+MUSIC_DIR = PROJECT_DIR / "assets" / "music"     # *.mp3 (YouTube Audio Library)
+MUSIC_VOLUME = 0.10
+HOOK_SECONDS = 2.6
+TERY_OUTRO_CATEGORY = "gleda-u-kameru"
+TERY_TOPIC_KW = {
+    "spava": ("sleep", "bed", "nap", "rest", "tired", "crate", "night", "lying"),
+    "grize": ("bit", "nip", "chew", "mouth", "teeth", "teething", "nibbl"),
+    "jede-pije": ("eat", "food", "bowl", "drink", "water", "meal", "feed", "kibble"),
+    "trci-igra": ("play", "run", "fetch", "toy", "zoom", "exercis", "energ", "chas"),
+    "kaos": ("destroy", "steal", "chaos", "mess", "shred", "bottle"),
+}
+# Tery klip kraći od segmenta: prvo blagi slow-mo (štenac usporeno izgleda
+# prirodno), ostatak zamrznut zadnji kadar — nikad vidljiva petlja.
+TERY_MAX_SLOWMO = 1.35
+TERY_MAX_FREEZE = 0.5
+
+
+def tery_fits(clip_dur, duration):
+    return clip_dur * TERY_MAX_SLOWMO + TERY_MAX_FREEZE >= duration
+
+
+def tery_clips(category):
+    return sorted(TERY_DIR.glob(f"{category}__*.mp4")) if TERY_DIR.is_dir() else []
+
+
+def plan_tery(segments, durations, rotation, env):
+    """{indeks segmenta: (Path klipa, oznaka)} — zadnji segment (CTA) uvijek
+    Tery koji gleda u kameru, plus najviše jedan srednji po temi slike."""
+    plan = {}
+    outro = tery_clips(TERY_OUTRO_CATEGORY)
+    if outro and len(segments) >= 2:
+        plan[len(segments) - 1] = (outro[rotation % len(outro)], "TERY  ·  @thedoghabit")
+    for i in range(1, len(segments) - 1):
+        words = re.findall(r"[a-z]+", segments[i].get("image_prompt", "").lower())
+        for category, kws in TERY_TOPIC_KW.items():
+            if not any(w.startswith(k) for w in words for k in kws):
+                continue
+            clips = tery_clips(category)
+            # Rotacija bira početni klip; uzima se prvi dovoljno dug.
+            for k in range(len(clips)):
+                clip = clips[(rotation + k) % len(clips)]
+                try:
+                    clip_dur, _ = probe_clip(clip, env)
+                except Exception:
+                    continue
+                if tery_fits(clip_dur, durations[i]):
+                    plan[i] = (clip, "REAL PUP: TERY")
+                    return plan
+    return plan
+
+
+def render_tery_segment(clip_name, duration, out_name, workdir, env):
+    """Kao render_clip_segment, ali bez petlje: Tery klip se ne smije vidljivo
+    ponoviti — ako je kraći od segmenta, uspori se (do TERY_MAX_SLOWMO) pa
+    se zadnji kadar zamrzne."""
+    frames = max(int(round(duration * FPS)), FPS)
+    try:
+        clip_dur, _ = probe_clip(workdir / clip_name, env)
+        slow = min(max(duration / clip_dur, 1.0), TERY_MAX_SLOWMO)
+    except Exception:
+        slow = 1.0
+    vf = (f"setpts={slow:.3f}*PTS,"
+          f"scale={VIDEO_W}:{VIDEO_H}:force_original_aspect_ratio=increase,"
+          f"crop={VIDEO_W}:{VIDEO_H},fps={FPS},setsar=1,"
+          f"tpad=stop_mode=clone:stop_duration={duration:.2f}")
+    run_cmd([env.get("FFMPEG_BIN") or "ffmpeg", "-y", "-i", clip_name,
+             "-vf", vf, "-frames:v", frames, "-an",
+             "-c:v", "libx264", "-preset", "medium", "-pix_fmt", "yuv420p",
+             "-video_track_timescale", "15360",
+             out_name],
+            cwd=workdir, what=f"ffmpeg tery segment {out_name}")
+
+
+def pick_music(workdir, rotation, env):
+    """Kopira jednu podlogu u workdir; vraća (ime, početni offset) ili None.
+    Offset rotira kroz pjesmu da svaki video ne počinje istim taktom."""
+    tracks = sorted(MUSIC_DIR.glob("*.mp3")) if MUSIC_DIR.is_dir() else []
+    if not tracks:
+        return None
+    track = tracks[rotation % len(tracks)]
+    try:
+        dur, _ = probe_clip(track, env)
+    except Exception:
+        dur = 0
+    offset = (rotation * 23) % max(int(dur) - 40, 1) if dur > 60 else 0
+    shutil.copyfile(track, workdir / "music.mp3")
+    return "music.mp3", offset
+
+
 def fetch_segment_image(prompt, env, dry_run):
     if dry_run:
         log("  [dry-run] koristim placeholder sliku umjesto Pexels API-ja")
@@ -813,10 +936,11 @@ def render_segment(image_name, duration, out_name, workdir, env):
             cwd=workdir, what=f"ffmpeg segment {out_name}")
 
 
-def assemble_video(segment_names, workdir, slug, env):
+def assemble_video(segment_names, workdir, slug, env, music=None):
     """Concat segmenata + audio + burn-in titlovi u finalni MP4. ffmpeg se
     vrti s cwd=workdir i relativnim imenima — apsolutni Windows putevi u
-    ass= filteru zahtijevaju escapanje dvotočke i backslasheva."""
+    ass= filteru zahtijevaju escapanje dvotočke i backslasheva.
+    music: (ime, offset) iz pick_music — tiho ispod naracije."""
     ffmpeg = env.get("FFMPEG_BIN") or "ffmpeg"
 
     concat_list = workdir / "concat.txt"
@@ -826,9 +950,20 @@ def assemble_video(segment_names, workdir, slug, env):
             cwd=workdir, what="ffmpeg concat")
 
     final_name = f"{slug}.mp4"
-    run_cmd([ffmpeg, "-y", "-i", "concat.mp4", "-i", "voice.mp3",
-             "-vf", "ass=subs.ass",
-             "-map", "0:v", "-map", "1:a",
+    inputs = ["-i", "concat.mp4", "-i", "voice.mp3"]
+    if music:
+        music_name, offset = music
+        inputs += ["-ss", str(offset), "-stream_loop", "-1", "-i", music_name]
+        # amix dijeli ulaze s 2; volume=2 vraća glas na punu glasnoću (vidi
+        # render_own_clip). duration=first: podloga staje s naracijom + fade.
+        audio = ["-filter_complex",
+                 f"[0:v]ass=subs.ass[v];[2:a]volume={MUSIC_VOLUME}[m];"
+                 f"[1:a]apad=pad_dur=0.8[vo];"
+                 f"[vo][m]amix=inputs=2:duration=first:dropout_transition=0,volume=2[a]",
+                 "-map", "[v]", "-map", "[a]", "-shortest"]
+    else:
+        audio = ["-vf", "ass=subs.ass", "-map", "0:v", "-map", "1:a"]
+    run_cmd([ffmpeg, "-y", *inputs, *audio,
              "-c:v", "libx264", "-preset", "medium", "-crf", "21",
              "-pix_fmt", "yuv420p",
              "-c:a", "aac", "-b:a", "192k",
@@ -1262,13 +1397,24 @@ def main():
         total_audio = audio_duration(workdir / "voice.mp3", env)
         log(f"  voiceover: {total_audio:.1f} s, {len(words)} riječi")
 
-        build_ass(words, workdir / "subs.ass")
-
         if args.own_clip:
+            build_ass(words, workdir / "subs.ass")
             final_path = render_own_clip(clip_name, total_audio, workdir, slug, env,
                                          args.clip_audio_volume)
         else:
-            final_path = render_stock_video(segments, total_audio, workdir, slug, env, args.dry_run)
+            durations = allocate_durations(segments, total_audio + 0.5)
+            rotation = len(state)
+            tery_plan = plan_tery(segments, durations, rotation, env)
+            music = pick_music(workdir, rotation, env)
+            log(f"  Tery segmenti: {sorted(i + 1 for i in tery_plan) or 'nema'}; "
+                f"glazba: {'da' if music else 'ne'}")
+            starts = [sum(durations[:i]) for i in range(len(durations))]
+            overlays = [(0, min(HOOK_SECONDS, durations[0]), "Hook", script["yt_title"])]
+            overlays += [(starts[i], starts[i] + durations[i], "Tag", label)
+                         for i, (_, label) in tery_plan.items()]
+            build_ass(words, workdir / "subs.ass", overlays)
+            final_path = render_stock_video(segments, durations, tery_plan, music,
+                                            workdir, slug, env, args.dry_run)
         size_mb = final_path.stat().st_size / 1024 / 1024
         log(f"Video renderiran: {final_path} ({size_mb:.1f} MB)")
 
@@ -1302,10 +1448,10 @@ def main():
     finish_run(env, state, post, post_title, slug, final_path, meta, youtube_id, args.dry_run)
 
 
-def render_stock_video(segments, total_audio, workdir, slug, env, dry_run):
-    """Pexels klipovi (fallback slike) po segmentu + naracija -> finalni MP4."""
+def render_stock_video(segments, durations, tery_plan, music, workdir, slug, env, dry_run):
+    """Pexels klipovi (fallback slike) po segmentu + naracija -> finalni MP4.
+    tery_plan: {indeks: (klip, oznaka)} iz plan_tery — ti segmenti su Tery."""
     segment_names = []
-    durations = allocate_durations(segments, total_audio + 0.5)
     # Video klipovi umjesto statičnih slika: pas koji se kreće u prve dvije
     # sekunde zaustavlja skrolanje, Ken Burns zoom preko fotke ne.
     # VIDEO_CLIPS=0 u .env-u vraća samo slike. Klip je best-effort: ako
@@ -1315,7 +1461,15 @@ def render_stock_video(segments, total_audio, workdir, slug, env, dry_run):
     for i, (seg, dur) in enumerate(zip(segments, durations)):
         seg_name = f"seg_{i}.mp4"
         kind = "slika"
-        if use_clips:
+        if i in tery_plan:
+            try:
+                tery_name = f"tery_{i}.mp4"
+                shutil.copyfile(tery_plan[i][0], workdir / tery_name)
+                render_tery_segment(tery_name, dur, seg_name, workdir, env)
+                kind = f"Tery: {tery_plan[i][0].name}"
+            except Exception as e:
+                log(f"  segment {i + 1}: Tery klip nije uspio ({e}) — koristim stock")
+        if kind == "slika" and use_clips:
             try:
                 clip_name = f"clip_{i}.mp4"
                 (workdir / clip_name).write_bytes(call_pexels_video(seg["image_prompt"], env))
@@ -1333,7 +1487,7 @@ def render_stock_video(segments, total_audio, workdir, slug, env, dry_run):
         log(f"  segment {i + 1}/{len(segments)}: {dur:.1f} s ({kind})")
     if use_clips:
         log(f"  klipova: {clip_count}/{len(segments)}")
-    return assemble_video(segment_names, workdir, slug, env)
+    return assemble_video(segment_names, workdir, slug, env, music=music)
 
 
 def finish_run(env, state, post, post_title, slug, final_path, meta, youtube_id, dry_run):
