@@ -57,6 +57,7 @@ from PIL import Image
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 ENV_PATH = PROJECT_DIR / ".env"
 STATE_PATH = PROJECT_DIR / "videos.json"
+HEARTBEAT_PATH = PROJECT_DIR / "video_heartbeat.json"
 OUTPUT_DIR = PROJECT_DIR / "videos"
 PLACEHOLDER_IMAGE = PROJECT_DIR / "assets" / "placeholder-dog.jpg"
 LOG_PATH = PROJECT_DIR / "logs" / "generate_video.log"
@@ -1216,6 +1217,11 @@ def main():
         post = get_next_post(env, state, wanted_slug=args.post_slug)
     if not post:
         log("Nema objavljenih postova bez videa — ništa za napraviti.")
+        # Trag za check_video_silence.py: tišina bez posla nije kvar. Piše se
+        # SAMO ovdje — ako get_next_post padne, traga nema i alarm vrijedi.
+        if not args.dry_run:
+            HEARTBEAT_PATH.write_text(json.dumps(
+                {"idle_at": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())}) + "\n")
         return
 
     post_title = strip_html(post["title"]["rendered"], limit=200)
