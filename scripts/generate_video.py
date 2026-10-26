@@ -794,7 +794,14 @@ TERY_TOPIC_KW = {
     "trci-igra": ("play", "run", "fetch", "toy", "zoom", "exercis", "energ", "chas"),
     "kaos": ("destroy", "steal", "chaos", "mess", "shred", "bottle"),
 }
-TERY_MID_MAX_STRETCH = 0.4   # Tery klip smije biti kraći od segmenta najviše toliko s (zadnji kadar se zamrzne)
+# Tery klip kraći od segmenta: prvo blagi slow-mo (štenac usporeno izgleda
+# prirodno), ostatak zamrznut zadnji kadar — nikad vidljiva petlja.
+TERY_MAX_SLOWMO = 1.35
+TERY_MAX_FREEZE = 0.5
+
+
+def tery_fits(clip_dur, duration):
+    return clip_dur * TERY_MAX_SLOWMO + TERY_MAX_FREEZE >= duration
 
 
 def tery_clips(category):
@@ -814,24 +821,31 @@ def plan_tery(segments, durations, rotation, env):
             if not any(w.startswith(k) for w in words for k in kws):
                 continue
             clips = tery_clips(category)
-            if not clips:
-                continue
-            clip = clips[rotation % len(clips)]
-            try:
-                clip_dur, _ = probe_clip(clip, env)
-            except Exception:
-                continue
-            if clip_dur + TERY_MID_MAX_STRETCH >= durations[i]:
-                plan[i] = (clip, "REAL PUP: TERY")
-                return plan
+            # Rotacija bira početni klip; uzima se prvi dovoljno dug.
+            for k in range(len(clips)):
+                clip = clips[(rotation + k) % len(clips)]
+                try:
+                    clip_dur, _ = probe_clip(clip, env)
+                except Exception:
+                    continue
+                if tery_fits(clip_dur, durations[i]):
+                    plan[i] = (clip, "REAL PUP: TERY")
+                    return plan
     return plan
 
 
 def render_tery_segment(clip_name, duration, out_name, workdir, env):
     """Kao render_clip_segment, ali bez petlje: Tery klip se ne smije vidljivo
-    ponoviti — ako je kraći od segmenta, zadnji kadar se zamrzne."""
+    ponoviti — ako je kraći od segmenta, uspori se (do TERY_MAX_SLOWMO) pa
+    se zadnji kadar zamrzne."""
     frames = max(int(round(duration * FPS)), FPS)
-    vf = (f"scale={VIDEO_W}:{VIDEO_H}:force_original_aspect_ratio=increase,"
+    try:
+        clip_dur, _ = probe_clip(workdir / clip_name, env)
+        slow = min(max(duration / clip_dur, 1.0), TERY_MAX_SLOWMO)
+    except Exception:
+        slow = 1.0
+    vf = (f"setpts={slow:.3f}*PTS,"
+          f"scale={VIDEO_W}:{VIDEO_H}:force_original_aspect_ratio=increase,"
           f"crop={VIDEO_W}:{VIDEO_H},fps={FPS},setsar=1,"
           f"tpad=stop_mode=clone:stop_duration={duration:.2f}")
     run_cmd([env.get("FFMPEG_BIN") or "ffmpeg", "-y", "-i", clip_name,
