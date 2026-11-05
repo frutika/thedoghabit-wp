@@ -95,8 +95,16 @@
 		var link = e.target.closest && e.target.closest('a[href$="#cookie-settings"]');
 		if (link) {
 			e.preventDefault();
+			// Googleov dijalog samo kad je Google CMP stvarno aktivan za ovog
+			// posjetitelja. Status 0 (UNKNOWN) = CMP nije pokrenut (npr. AdSense
+			// još nije odobrio sajt, pa Funding Choices ne poslužuje poruku) —
+			// tada showRevocationMessage() tiho ne radi ništa i link je "mrtav".
+			// 5 (CONSENT_NOT_REQUIRED) = posjetitelj izvan EGP-a. U oba slučaja
+			// otvaramo naš modal.
 			var fc = window.googlefc;
-			if (fc && typeof fc.showRevocationMessage === 'function') {
+			var status = fc && typeof fc.getConsentStatus === 'function' ? fc.getConsentStatus() : 0;
+			var notRequired = fc && fc.ConsentStatusEnum ? fc.ConsentStatusEnum.CONSENT_NOT_REQUIRED : 5;
+			if (fc && typeof fc.showRevocationMessage === 'function' && status && status !== notRequired) {
 				fc.showRevocationMessage();
 			} else {
 				openModal();
