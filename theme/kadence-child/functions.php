@@ -4,13 +4,6 @@
  */
 
 add_action( 'wp_enqueue_scripts', function () {
-	wp_enqueue_style(
-		'tdh-google-fonts',
-		'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap',
-		[],
-		null
-	);
-
 	// filemtime umjesto fiksnog theme Version stringa — Cloudflare kešira
 	// style.css po URL-u (uklj. ?ver=), pa statična verzija znači da izmjene
 	// ostanu nevidljive do isteka edge cachea (do 4h). filemtime mijenja URL
@@ -89,18 +82,31 @@ add_action( 'wp_footer', function () {
 	<?php
 } );
 
-// Preconnect na font CDN-ove — bez ovoga browser otkriva fonts.gstatic.com
-// tek nakon što parsira Google Fonts CSS, što gura fontove (i FCP) unatrag.
-add_filter( 'wp_resource_hints', function ( $urls, $relation_type ) {
-	if ( 'preconnect' === $relation_type ) {
-		$urls[] = [ 'href' => 'https://fonts.googleapis.com' ];
-		$urls[] = [
-			'href'        => 'https://fonts.gstatic.com',
-			'crossorigin' => 'anonymous',
-		];
+// Fontovi su self-hostani (fonts/*.woff2, latin subset, variable wght) umjesto
+// Google Fonts CSS-a: googleapis.com CSS je bio render-blocking resurs s druge
+// domene (DNS+TLS na 2 origina prije prvog painta) — PageSpeed mobile FCP 3,5 s /
+// LCP 7,2 s (2026-11-13). @font-face je inline u <head> (nema dodatnog CSS
+// zahtjeva), a preload pokreće download fontova paralelno sa CSS-om.
+add_action( 'wp_head', function () {
+	$base = get_stylesheet_directory_uri() . '/fonts/';
+	foreach ( [ 'fraunces-latin.woff2', 'inter-latin.woff2' ] as $font ) {
+		printf( '<link rel="preload" href="%s" as="font" type="font/woff2" crossorigin>' . "\n", esc_url( $base . $font ) );
 	}
-	return $urls;
-}, 10, 2 );
+	$range = 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD';
+	echo '<style id="tdh-fonts">'
+		. "@font-face{font-family:'Fraunces';font-style:normal;font-weight:500 600;font-display:swap;src:url(" . esc_url( $base . 'fraunces-latin.woff2' ) . ") format('woff2');unicode-range:{$range}}"
+		. "@font-face{font-family:'Inter';font-style:normal;font-weight:400 700;font-display:swap;src:url(" . esc_url( $base . 'inter-latin.woff2' ) . ") format('woff2');unicode-range:{$range}}"
+		. "</style>\n";
+}, 2 );
+
+// Logo: WP core mu daje fetchpriority=high (prva slika na stranici) i
+// sizes="100vw", pa se na mobitelu skida 768w/1024w PNG s istim prioritetom
+// kao hero (LCP). Logo se prikazuje na max-height 46px (~250px širine).
+add_filter( 'get_custom_logo_image_attributes', function ( $attr ) {
+	$attr['fetchpriority'] = 'auto'; // unset ne pomaže — core ga tada ponovo doda
+	$attr['sizes'] = '250px';
+	return $attr;
+} );
 
 /**
  * Homepage hero — editable via Customizer so content updates don't need code changes.
@@ -150,7 +156,7 @@ function tdh_post_card() {
 	?>
 	<a href="<?php the_permalink(); ?>" class="tdh-post-card">
 		<?php if ( has_post_thumbnail() ) : ?>
-			<div class="tdh-post-card-media"><?php the_post_thumbnail( 'medium_large' ); ?></div>
+			<div class="tdh-post-card-media"><?php the_post_thumbnail( 'medium_large', [ 'loading' => 'lazy' ] ); ?></div>
 		<?php endif; ?>
 		<?php
 		$tdh_card_cats = get_the_category();
