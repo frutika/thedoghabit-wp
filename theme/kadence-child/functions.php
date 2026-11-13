@@ -102,11 +102,18 @@ add_action( 'wp_head', function () {
 // Logo: WP core mu daje fetchpriority=high (prva slika na stranici) i
 // sizes="100vw", pa se na mobitelu skida 768w/1024w PNG s istim prioritetom
 // kao hero (LCP). Logo se prikazuje na max-height 46px (~250px širine).
-add_filter( 'get_custom_logo_image_attributes', function ( $attr ) {
-	$attr['fetchpriority'] = 'auto'; // unset ne pomaže — core ga tada ponovo doda
+// Kadence logo ne ide kroz get_custom_logo() nego ravno kroz
+// wp_get_attachment_image(), pa get_custom_logo_image_attributes ne hvata —
+// zato wp_get_attachment_image_attributes (izvršava se nakon što core doda
+// fetchpriority), ograničeno na attachment logotipa.
+add_filter( 'wp_get_attachment_image_attributes', function ( $attr, $attachment ) {
+	if ( (int) $attachment->ID !== (int) get_theme_mod( 'custom_logo' ) ) {
+		return $attr;
+	}
+	$attr['fetchpriority'] = 'auto';
 	$attr['sizes'] = '250px';
 	return $attr;
-} );
+}, 10, 2 );
 
 /**
  * Homepage hero — editable via Customizer so content updates don't need code changes.
