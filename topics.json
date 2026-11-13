@@ -1,5 +1,45 @@
 [
   {
+    "title_seed": "Why Does My Dog Sleep at My Feet? What It Really Means",
+    "category": "behavior",
+    "keywords": [
+      "why does my dog sleep at my feet",
+      "dog sleeps at my feet",
+      "dog sleeping position meaning"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Dog Sleeping Positions and What They Reveal About Your Dog",
+    "category": "behavior",
+    "keywords": [
+      "dog sleeping positions",
+      "dog sleep position meaning",
+      "what dog sleeping positions mean"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How Much Sleep Do Dogs Need? By Age, Breed, and Activity",
+    "category": "habits",
+    "keywords": [
+      "how much sleep do dogs need",
+      "dog sleep needs by age",
+      "how many hours do dogs sleep"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Is My Dog Sleeping So Much? Normal vs. Warning Signs",
+    "category": "problems",
+    "keywords": [
+      "why is my dog sleeping so much",
+      "dog sleeping too much",
+      "lethargic dog when to worry"
+    ],
+    "status": "done"
+  },
+  {
     "title_seed": "How to Teach a Dog to Sit and Stay: A Step-by-Step Guide",
     "category": "training",
     "keywords": [
@@ -27,7 +67,7 @@
       "come when called",
       "off-leash recall"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "title_seed": "Potty Training a Puppy: A Realistic Timeline and Schedule",
@@ -37,7 +77,7 @@
       "house training dog",
       "puppy bathroom schedule"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "title_seed": "Crate Training Made Easy: A Week-by-Week Plan",
@@ -47,107 +87,7 @@
       "crate training puppy",
       "dog crate schedule"
     ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Why Does My Dog Bark at Everything? Common Triggers Explained",
-    "category": "behavior",
-    "keywords": [
-      "dog barking triggers",
-      "why dogs bark",
-      "excessive barking causes"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Separation Anxiety in Dogs: Signs and How to Help",
-    "category": "behavior",
-    "keywords": [
-      "separation anxiety dogs",
-      "dog anxiety when alone",
-      "calming a dog with separation anxiety"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Understanding Dog Body Language: What Your Dog Is Telling You",
-    "category": "behavior",
-    "keywords": [
-      "dog body language",
-      "reading dog signals",
-      "canine communication"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Resource Guarding in Dogs: Causes and Safe Fixes",
-    "category": "behavior",
-    "keywords": [
-      "resource guarding dog",
-      "dog food aggression",
-      "guarding toys"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Why Is My Dog Suddenly Aggressive? Possible Causes",
-    "category": "behavior",
-    "keywords": [
-      "sudden dog aggression",
-      "dog aggression causes",
-      "aggressive dog behavior"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Why Does My Dog Eat Grass? Should You Be Worried?",
-    "category": "problems",
-    "keywords": [
-      "dog eating grass",
-      "why do dogs eat grass",
-      "is grass eating normal"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "How to Stop a Dog From Jumping on Guests",
-    "category": "problems",
-    "keywords": [
-      "stop dog jumping",
-      "dog jumping on people",
-      "greeting manners training"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Why Does My Dog Dig Holes in the Yard?",
-    "category": "problems",
-    "keywords": [
-      "dog digging holes",
-      "why dogs dig",
-      "stop dog digging"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "How to Stop Destructive Chewing in Adult Dogs",
-    "category": "problems",
-    "keywords": [
-      "dog chewing furniture",
-      "stop destructive chewing",
-      "adult dog chewing"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Why Won't My Dog Listen to Me? Troubleshooting Obedience Issues",
-    "category": "problems",
-    "keywords": [
-      "dog not listening",
-      "disobedient dog",
-      "obedience troubleshooting"
-    ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "title_seed": "Best Harnesses for Dogs That Pull: What to Look For",
@@ -157,7 +97,17 @@
       "no-pull harness",
       "harness buying guide"
     ],
-    "status": "pending"
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Bark at Everything? Common Triggers Explained",
+    "category": "behavior",
+    "keywords": [
+      "dog barking triggers",
+      "why dogs bark",
+      "excessive barking causes"
+    ],
+    "status": "done"
   },
   {
     "title_seed": "How to Choose the Right Size Crate for Your Dog",
@@ -167,7 +117,17 @@
       "choosing a crate",
       "crate sizing chart"
     ],
-    "status": "pending"
+    "status": "done"
+  },
+  {
+    "title_seed": "Separation Anxiety in Dogs: Signs and How to Help",
+    "category": "behavior",
+    "keywords": [
+      "separation anxiety dogs",
+      "dog anxiety when alone",
+      "calming a dog with separation anxiety"
+    ],
+    "status": "done"
   },
   {
     "title_seed": "Slow Feeder Bowls: Do They Actually Help?",
@@ -177,7 +137,17 @@
       "slow feeder benefits",
       "fast eating dog"
     ],
-    "status": "pending"
+    "status": "done"
+  },
+  {
+    "title_seed": "Understanding Dog Body Language: What Your Dog Is Telling You",
+    "category": "behavior",
+    "keywords": [
+      "dog body language",
+      "reading dog signals",
+      "canine communication"
+    ],
+    "status": "done"
   },
   {
     "title_seed": "Best Durable Chew Toys for Aggressive Chewers",
@@ -187,7 +157,17 @@
       "tough chew toys",
       "aggressive chewer toys"
     ],
-    "status": "pending"
+    "status": "done"
+  },
+  {
+    "title_seed": "Resource Guarding in Dogs: Causes and Safe Fixes",
+    "category": "behavior",
+    "keywords": [
+      "resource guarding dog",
+      "dog food aggression",
+      "guarding toys"
+    ],
+    "status": "done"
   },
   {
     "title_seed": "GPS Dog Trackers: Are They Worth It?",
@@ -197,185 +177,17 @@
       "dog tracking collar",
       "best gps tracker for dogs"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
-    "title_seed": "How Much Exercise Does Your Dog Really Need?",
-    "category": "habits",
-    "keywords": [
-      "dog exercise needs",
-      "how much exercise dogs need",
-      "daily dog exercise"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Building a Consistent Daily Routine for Your Dog",
-    "category": "habits",
-    "keywords": [
-      "dog daily routine",
-      "consistent dog schedule",
-      "dog routine benefits"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "How to Create a Feeding Schedule That Works",
-    "category": "habits",
-    "keywords": [
-      "dog feeding schedule",
-      "how often to feed a dog",
-      "feeding routine"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Mental Enrichment Ideas to Keep Your Dog Happy",
-    "category": "habits",
-    "keywords": [
-      "dog mental enrichment",
-      "enrichment activities for dogs",
-      "dog puzzle toys"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Why Sleep Matters: How Much Rest Dogs Actually Need",
-    "category": "habits",
-    "keywords": [
-      "dog sleep needs",
-      "how much do dogs sleep",
-      "dog rest schedule"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "The First Two Weeks With a New Puppy: What to Expect",
-    "category": "puppies",
-    "keywords": [
-      "new puppy first weeks",
-      "bringing puppy home",
-      "puppy first days"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Puppy Socialization: A Critical Window You Can't Miss",
-    "category": "puppies",
-    "keywords": [
-      "puppy socialization window",
-      "socializing a puppy",
-      "puppy socialization checklist"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Why Does My Puppy Bite So Much? Normal or Not?",
-    "category": "puppies",
-    "keywords": [
-      "puppy biting",
-      "puppy nipping",
-      "why puppies bite"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Puppy Vaccination Schedule: What Owners Need to Know",
-    "category": "puppies",
-    "keywords": [
-      "puppy vaccination schedule",
-      "puppy shots timeline",
-      "when to vaccinate a puppy"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "How to Puppy-Proof Your Home Room by Room",
-    "category": "puppies",
-    "keywords": [
-      "puppy proofing house",
-      "puppy proof home",
-      "puppy safety checklist"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Jack Russell Terrier Training: Taming the High-Energy Genius",
-    "category": "training",
-    "keywords": [
-      "jack russell terrier training",
-      "high energy dog training",
-      "smart dog breed training"
-    ],
-    "tags": [
-      "jack-russell"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "How to Stop a Jack Russell Terrier From Digging and Escaping",
-    "category": "training",
-    "keywords": [
-      "jack russell terrier digging",
-      "stop dog escaping yard",
-      "terrier escape artist"
-    ],
-    "tags": [
-      "jack-russell"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Why Jack Russell Terriers Bark So Much (and What to Do About It)",
+    "title_seed": "Why Is My Dog Suddenly Aggressive? Possible Causes",
     "category": "behavior",
     "keywords": [
-      "jack russell terrier barking",
-      "why terriers bark",
-      "reduce dog barking"
+      "sudden dog aggression",
+      "dog aggression causes",
+      "aggressive dog behavior"
     ],
-    "tags": [
-      "jack-russell"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Jack Russell Terrier Prey Drive: Managing the Hunter Instinct",
-    "category": "behavior",
-    "keywords": [
-      "jack russell terrier prey drive",
-      "terrier hunting instinct",
-      "manage dog prey drive"
-    ],
-    "tags": [
-      "jack-russell"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Jack Russell Terrier Separation Anxiety: Causes and Fixes",
-    "category": "problems",
-    "keywords": [
-      "jack russell terrier separation anxiety",
-      "terrier home alone",
-      "dog separation anxiety fix"
-    ],
-    "tags": [
-      "jack-russell"
-    ],
-    "status": "pending"
-  },
-  {
-    "title_seed": "Why Does My Jack Russell Terrier Never Get Tired?",
-    "category": "problems",
-    "keywords": [
-      "jack russell terrier energy level",
-      "terrier never tired",
-      "high energy dog breed problems"
-    ],
-    "tags": [
-      "jack-russell"
-    ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "title_seed": "Best Harnesses and Leashes for Jack Russell Terriers",
@@ -388,7 +200,17 @@
     "tags": [
       "jack-russell"
     ],
-    "status": "pending"
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Eat Grass? Should You Be Worried?",
+    "category": "problems",
+    "keywords": [
+      "dog eating grass",
+      "why do dogs eat grass",
+      "is grass eating normal"
+    ],
+    "status": "done"
   },
   {
     "title_seed": "Best Interactive Toys for Jack Russell Terriers",
@@ -401,7 +223,225 @@
     "tags": [
       "jack-russell"
     ],
-    "status": "pending"
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop a Dog From Jumping on Guests",
+    "category": "problems",
+    "keywords": [
+      "stop dog jumping",
+      "dog jumping on people",
+      "greeting manners training"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Dig Holes in the Yard?",
+    "category": "problems",
+    "keywords": [
+      "dog digging holes",
+      "why dogs dig",
+      "stop dog digging"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop Destructive Chewing in Adult Dogs",
+    "category": "problems",
+    "keywords": [
+      "dog chewing furniture",
+      "stop destructive chewing",
+      "adult dog chewing"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Won't My Dog Listen to Me? Troubleshooting Obedience Issues",
+    "category": "problems",
+    "keywords": [
+      "dog not listening",
+      "disobedient dog",
+      "obedience troubleshooting"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How Much Exercise Does Your Dog Really Need?",
+    "category": "habits",
+    "keywords": [
+      "dog exercise needs",
+      "how much exercise dogs need",
+      "daily dog exercise"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Building a Consistent Daily Routine for Your Dog",
+    "category": "habits",
+    "keywords": [
+      "dog daily routine",
+      "consistent dog schedule",
+      "dog routine benefits"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Create a Feeding Schedule That Works",
+    "category": "habits",
+    "keywords": [
+      "dog feeding schedule",
+      "how often to feed a dog",
+      "feeding routine"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Mental Enrichment Ideas to Keep Your Dog Happy",
+    "category": "habits",
+    "keywords": [
+      "dog mental enrichment",
+      "enrichment activities for dogs",
+      "dog puzzle toys"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Sleep Matters: How Much Rest Dogs Actually Need",
+    "category": "habits",
+    "keywords": [
+      "dog sleep needs",
+      "how much do dogs sleep",
+      "dog rest schedule"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "The First Two Weeks With a New Puppy: What to Expect",
+    "category": "puppies",
+    "keywords": [
+      "new puppy first weeks",
+      "bringing puppy home",
+      "puppy first days"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Puppy Socialization: A Critical Window You Can't Miss",
+    "category": "puppies",
+    "keywords": [
+      "puppy socialization window",
+      "socializing a puppy",
+      "puppy socialization checklist"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Puppy Bite So Much? Normal or Not?",
+    "category": "puppies",
+    "keywords": [
+      "puppy biting",
+      "puppy nipping",
+      "why puppies bite"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Puppy Vaccination Schedule: What Owners Need to Know",
+    "category": "puppies",
+    "keywords": [
+      "puppy vaccination schedule",
+      "puppy shots timeline",
+      "when to vaccinate a puppy"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Puppy-Proof Your Home Room by Room",
+    "category": "puppies",
+    "keywords": [
+      "puppy proofing house",
+      "puppy proof home",
+      "puppy safety checklist"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Jack Russell Terrier Training: Taming the High-Energy Genius",
+    "category": "training",
+    "keywords": [
+      "jack russell terrier training",
+      "high energy dog training",
+      "smart dog breed training"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop a Jack Russell Terrier From Digging and Escaping",
+    "category": "training",
+    "keywords": [
+      "jack russell terrier digging",
+      "stop dog escaping yard",
+      "terrier escape artist"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Jack Russell Terriers Bark So Much (and What to Do About It)",
+    "category": "behavior",
+    "keywords": [
+      "jack russell terrier barking",
+      "why terriers bark",
+      "reduce dog barking"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Jack Russell Terrier Prey Drive: Managing the Hunter Instinct",
+    "category": "behavior",
+    "keywords": [
+      "jack russell terrier prey drive",
+      "terrier hunting instinct",
+      "manage dog prey drive"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Jack Russell Terrier Separation Anxiety: Causes and Fixes",
+    "category": "problems",
+    "keywords": [
+      "jack russell terrier separation anxiety",
+      "terrier home alone",
+      "dog separation anxiety fix"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Jack Russell Terrier Never Get Tired?",
+    "category": "problems",
+    "keywords": [
+      "jack russell terrier energy level",
+      "terrier never tired",
+      "high energy dog breed problems"
+    ],
+    "tags": [
+      "jack-russell"
+    ],
+    "status": "done"
   },
   {
     "title_seed": "Daily Exercise Routine for a Jack Russell Terrier",
@@ -414,7 +454,7 @@
     "tags": [
       "jack-russell"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "title_seed": "Jack Russell Terrier Puppy: First 90 Days Guide",
@@ -426,6 +466,1186 @@
     ],
     "tags": [
       "jack-russell"
+    ],
+    "status": "parked"
+  },
+  {
+    "title_seed": "Why Does My Dog Sniff Everything on Walks? (And Should I Stop It?)",
+    "category": "behavior",
+    "keywords": [
+      "dog sniffing on walks",
+      "why dogs sniff",
+      "is sniffing normal for dogs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop Your Dog From Counter Surfing in the Kitchen",
+    "category": "problems",
+    "keywords": [
+      "dog counter surfing",
+      "stop dog stealing food off counter",
+      "counter surfing behavior"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Automatic Ball Launchers for Dogs: Reduce Your Throw",
+    "category": "gear",
+    "keywords": [
+      "automatic ball launcher for dogs",
+      "best ball thrower",
+      "dog fetch machine"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Follow Me Everywhere? Normal or Anxious?",
+    "category": "behavior",
+    "keywords": [
+      "dog follows me everywhere",
+      "shadow dog behavior",
+      "velcro dog"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Teaching Leave It: The Life-Saving Command Every Dog Needs",
+    "category": "training",
+    "keywords": [
+      "teach dog leave it command",
+      "leave it training",
+      "drop it vs leave it"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Puppy Teething: When Does It Start and How Long Does It Last?",
+    "category": "puppies",
+    "keywords": [
+      "puppy teething age",
+      "when do puppies teethe",
+      "puppy teething timeline"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Create a Nighttime Routine That Helps Your Dog Sleep",
+    "category": "habits",
+    "keywords": [
+      "dog bedtime routine",
+      "help dog sleep at night",
+      "calming evening routine for dogs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Lick His Paws Constantly? When to Worry",
+    "category": "problems",
+    "keywords": [
+      "dog licking paws constantly",
+      "excessive paw licking",
+      "why does dog lick paws"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Puzzle Feeders for Slow Eating and Mental Stimulation",
+    "category": "gear",
+    "keywords": [
+      "puzzle feeder for dogs",
+      "slow feeder puzzle bowl",
+      "enrichment puzzle feeders"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Introduce a New Puppy to Your Adult Dog Safely",
+    "category": "puppies",
+    "keywords": [
+      "introduce puppy to adult dog",
+      "puppy introduction tips",
+      "new puppy older dog"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Excessive Whining in Dogs: Causes and How to Reduce It",
+    "category": "behavior",
+    "keywords": [
+      "dog whining excessively",
+      "why does my dog whine",
+      "stop dog from whining"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Waterproof Dog Beds for Messy or Incontinent Dogs",
+    "category": "gear",
+    "keywords": [
+      "waterproof dog bed",
+      "washable dog bed for accidents",
+      "best beds for senior dogs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Teaching Your Dog to Walk on a Loose Leash: Beyond Just Pulling",
+    "category": "training",
+    "keywords": [
+      "loose leash walking",
+      "teach dog to walk beside you",
+      "loose lead walking"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Puppy Cry in the Crate at Night?",
+    "category": "puppies",
+    "keywords": [
+      "puppy crying in crate at night",
+      "puppy crate whining",
+      "crate training crying"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Dog Jumping on the Couch: Why and How to Stop It",
+    "category": "problems",
+    "keywords": [
+      "dog jumping on couch",
+      "stop dog from jumping furniture",
+      "keep dog off couch"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Elevated Dog Feeders: Do They Help With Digestion?",
+    "category": "gear",
+    "keywords": [
+      "elevated dog feeder",
+      "raised dog bowl benefits",
+      "best elevated feeders"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop Your Dog From Nipping and Mouthing During Play",
+    "category": "training",
+    "keywords": [
+      "dog nipping during play",
+      "stop dog mouthing",
+      "puppy nipping behavior"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Understanding Prey Drive in Dogs: Breed Differences and Management",
+    "category": "behavior",
+    "keywords": [
+      "dog prey drive",
+      "high prey drive dogs",
+      "managing prey drive in dogs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "First Vet Visit With Your Puppy: What to Bring and Expect",
+    "category": "puppies",
+    "keywords": [
+      "puppy first vet visit",
+      "first veterinary appointment puppy",
+      "puppy wellness exam"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Reflective Collars and Leashes for Nighttime Safety",
+    "category": "gear",
+    "keywords": [
+      "reflective dog collar",
+      "reflective dog leash",
+      "nighttime dog safety gear"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Eat Dirt? When to Worry and How to Stop It",
+    "category": "problems",
+    "keywords": [
+      "dog eating dirt",
+      "pica in dogs",
+      "why dogs eat dirt"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop Your Dog From Lunging at Other Dogs on Walks",
+    "category": "training",
+    "keywords": [
+      "dog lunging on leash",
+      "aggressive lunging",
+      "leash lunging behavior"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Dog Beds for Anxiety: Top Picks for Anxious Dogs",
+    "category": "gear",
+    "keywords": [
+      "anxiety dog bed",
+      "calming dog bed",
+      "best bed for anxious dogs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Puppy Biting vs. Normal Play: How to Tell the Difference",
+    "category": "puppies",
+    "keywords": [
+      "puppy biting behavior",
+      "puppy play biting",
+      "is puppy biting normal"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Teaching Your Dog to Drop It: Essential Safety Command",
+    "category": "training",
+    "keywords": [
+      "teach drop it command",
+      "dog drop it training",
+      "drop command"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Stare at Me? Understanding Canine Eye Contact",
+    "category": "behavior",
+    "keywords": [
+      "dog staring at you",
+      "why dog stares",
+      "dog eye contact meaning"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Washable Dog Beds: Durable and Easy to Clean",
+    "category": "gear",
+    "keywords": [
+      "washable dog bed",
+      "machine washable dog bed",
+      "easy clean dog bed"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop Your Dog From Pulling on the Leash (Advanced Tips)",
+    "category": "training",
+    "keywords": [
+      "advanced leash training",
+      "stop pulling leash",
+      "loose leash walking"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Reverse Sneezing in Dogs: Is It Dangerous or Just Annoying?",
+    "category": "problems",
+    "keywords": [
+      "reverse sneezing dogs",
+      "dog reverse sneeze",
+      "is reverse sneeze normal"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How Often Should You Bathe Your Dog? Breed and Skin Guide",
+    "category": "habits",
+    "keywords": [
+      "how often bathe dog",
+      "dog bathing schedule",
+      "bathing frequency by breed"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Dog Grooming Clippers for Home Use: Buyer's Guide",
+    "category": "gear",
+    "keywords": [
+      "best dog clippers",
+      "home dog grooming clippers",
+      "cordless dog clipper"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Yawn Around Me? Body Language Decoded",
+    "category": "behavior",
+    "keywords": [
+      "dog yawning meaning",
+      "why dog yawns",
+      "contagious yawning in dogs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Introducing Your Puppy to Water: Swimming and Bath Safety",
+    "category": "puppies",
+    "keywords": [
+      "puppy swimming",
+      "puppy first bath",
+      "introducing puppy to water"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Trim Your Dog's Nails at Home Without Injury",
+    "category": "habits",
+    "keywords": [
+      "how to trim dog nails",
+      "dog nail trimming at home",
+      "nail care routine"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Rope Toys for Dogs: Safe Play and Dental Benefits",
+    "category": "gear",
+    "keywords": [
+      "rope toys for dogs",
+      "best rope toy",
+      "dog rope toy safety"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Whining in Adult Dogs: Causes Beyond Attention-Seeking",
+    "category": "behavior",
+    "keywords": [
+      "adult dog whining",
+      "excessive whining",
+      "why adult dogs whine"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Puppy-Proof Your Backyard: Escape Prevention Guide",
+    "category": "puppies",
+    "keywords": [
+      "puppy-proof yard",
+      "puppy escape prevention",
+      "secure backyard puppy"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Teaching Your Dog to Ring a Bell to Go Outside",
+    "category": "training",
+    "keywords": [
+      "dog bell training",
+      "teach dog ring bell",
+      "bell for potty training"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Dog Waste Bags: Eco-Friendly and Leak-Proof Options",
+    "category": "gear",
+    "keywords": [
+      "best dog poop bags",
+      "eco friendly waste bags",
+      "leak proof dog bags"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Establishing a Grooming Routine Your Dog Will Actually Tolerate",
+    "category": "habits",
+    "keywords": [
+      "dog grooming routine",
+      "grooming schedule for dogs",
+      "regular grooming habits"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop Your Dog From Eating Their Own Poop",
+    "category": "problems",
+    "keywords": [
+      "dog eating poop",
+      "coprophagia in dogs",
+      "why dogs eat feces"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Elevated Feeding Stations: Top Picks for Messy Eaters",
+    "category": "gear",
+    "keywords": [
+      "elevated feeding station for dogs",
+      "best dog food bowls",
+      "raised feeder for dogs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Heel Correctly at Home But Not on Walks?",
+    "category": "training",
+    "keywords": [
+      "dog won't heel on walks",
+      "training generalization dogs",
+      "heel command distraction"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Puppy Play Biting vs. Aggression: How to Know the Difference",
+    "category": "puppies",
+    "keywords": [
+      "puppy play biting",
+      "aggressive puppy behavior",
+      "when puppy biting is serious"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Create a Morning Routine That Prevents Anxious Behavior",
+    "category": "habits",
+    "keywords": [
+      "dog morning routine",
+      "prevent separation anxiety routine",
+      "daily routine anxious dogs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Pant Excessively at Night? Common Causes",
+    "category": "problems",
+    "keywords": [
+      "dog panting at night",
+      "excessive panting causes",
+      "anxiety panting dogs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Long-Line Leashes for Teaching Recall in Open Spaces",
+    "category": "gear",
+    "keywords": [
+      "long line leash dogs",
+      "best recall training leash",
+      "30 foot dog leash"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Teach Your Dog to Wait at Doorways: Step-by-Step Training",
+    "category": "training",
+    "keywords": [
+      "dog wait at door",
+      "doorway manners training",
+      "teach dog to wait"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "First 24 Hours With a New Puppy: What Actually Happens",
+    "category": "puppies",
+    "keywords": [
+      "first day with puppy",
+      "new puppy arrival",
+      "puppy first night"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Establish a Consistent Bedtime Routine for Your Dog",
+    "category": "habits",
+    "keywords": [
+      "dog bedtime routine",
+      "evening routine for dogs",
+      "preparing dog for bed"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Shake When Excited? Normal or Nerve Issues?",
+    "category": "behavior",
+    "keywords": [
+      "dog shaking when excited",
+      "trembling anxiety dogs",
+      "when dog tremors are serious"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Sniff Mats for Mental Enrichment and Calm Behavior",
+    "category": "gear",
+    "keywords": [
+      "sniff mat for dogs",
+      "nose work mat benefits",
+      "best enrichment sniff mat"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Teach Your Dog to Walk on Specific Side During Heel",
+    "category": "training",
+    "keywords": [
+      "teach dog to heel on left",
+      "which side dog should heel",
+      "consistent heel position"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Puppy Spaying and Neutering: Timing and What to Expect After",
+    "category": "puppies",
+    "keywords": [
+      "when to spay neuter puppy",
+      "puppy surgery recovery",
+      "spay neuter age for dogs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Your Dog's Meal Schedule Affects Bathroom Schedule",
+    "category": "habits",
+    "keywords": [
+      "meal schedule affects potty",
+      "feeding time consistency dogs",
+      "puppy feeding schedule importance"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Leash Reactivity: Why Your Dog Lunges and How to Fix It",
+    "category": "behavior",
+    "keywords": [
+      "leash reactive dog",
+      "lunging on leash causes",
+      "reactive dog training"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Hands-Free Dog Leashes for Running and Hiking",
+    "category": "gear",
+    "keywords": [
+      "hands free dog leash",
+      "running leash for dogs",
+      "waist leash for dogs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Teaching the Touch Command: A Gateway to Advanced Training",
+    "category": "training",
+    "keywords": [
+      "touch command for dogs",
+      "teach dog to touch hand",
+      "foundation touch command"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Puppy Biting During Training Sessions: When to Stop Practice",
+    "category": "puppies",
+    "keywords": [
+      "puppy biting during training",
+      "excited biting in puppies",
+      "training tired puppy"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Post-Walk Routine: How to Settle Your Dog After Exercise",
+    "category": "habits",
+    "keywords": [
+      "post exercise routine dogs",
+      "how to calm dog after walk",
+      "settling anxious dog after play"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Pace Back and Forth? Causes and Solutions",
+    "category": "behavior",
+    "keywords": [
+      "dog pacing back and forth",
+      "why does my dog pace",
+      "dog pacing anxiety"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop Your Dog From Begging at the Table During Meals",
+    "category": "training",
+    "keywords": [
+      "dog begging at table",
+      "how to stop dog begging",
+      "stop begging behavior"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Excessive Scratching in Dogs: When It's Allergies vs. Behavior",
+    "category": "problems",
+    "keywords": [
+      "dog scratching excessively",
+      "why is my dog scratching so much",
+      "dog itching problems"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Dog Leashes for Reactive Dogs: Avoid the Lunge",
+    "category": "gear",
+    "keywords": [
+      "best leash for reactive dogs",
+      "leash for lunging dogs",
+      "reactive dog equipment"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Teaching Your Dog to Settle on a Mat: Calm-Down Protocol",
+    "category": "training",
+    "keywords": [
+      "teach dog to settle on mat",
+      "dog mat training",
+      "settle command for dogs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Refuse to Eat? Medical vs. Behavioral Causes",
+    "category": "problems",
+    "keywords": [
+      "dog won't eat",
+      "dog refusing food",
+      "why is my dog not eating"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Establishing a Consistent Walk Schedule: Time and Distance Guide",
+    "category": "habits",
+    "keywords": [
+      "dog walk schedule",
+      "how often to walk your dog",
+      "dog walking routine"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Calming Dog Beds for Nervous and Anxious Dogs",
+    "category": "gear",
+    "keywords": [
+      "calming dog bed",
+      "best bed for anxious dogs",
+      "orthopedic calming beds"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Puppy Refuse to Eat Kibble? Solutions That Work",
+    "category": "puppies",
+    "keywords": [
+      "puppy won't eat kibble",
+      "picky eater puppy",
+      "puppy refusing food"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Teach Your Dog the 'Wait' Command at Doors and Gates",
+    "category": "training",
+    "keywords": [
+      "teach dog wait command",
+      "dog door training",
+      "wait at door command"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Tail Chasing in Dogs: Play, Boredom, or Medical Red Flag?",
+    "category": "behavior",
+    "keywords": [
+      "dog chasing tail",
+      "tail chasing in dogs",
+      "why does my dog chase his tail"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Fetch Toys for Dogs That Drop It Immediately",
+    "category": "gear",
+    "keywords": [
+      "best fetch toy for dogs",
+      "dog won't drop fetch toy",
+      "fetch toys that float"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Leash Manners: Teaching Your Dog to Walk Politely in Public",
+    "category": "training",
+    "keywords": [
+      "leash manners dogs",
+      "polite walking on leash",
+      "teach dog leash etiquette"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop Your Dog From Stealing Food (Impulse Control Training)",
+    "category": "training",
+    "keywords": [
+      "dog stealing food",
+      "impulse control training dogs",
+      "stop food theft behavior"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Puppy Hiccups: Are They Normal or a Sign of Something Wrong?",
+    "category": "puppies",
+    "keywords": [
+      "puppy hiccups",
+      "why do puppies get hiccups",
+      "puppy hiccups normal"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Groom Himself Excessively? Stress or Health Issue?",
+    "category": "problems",
+    "keywords": [
+      "excessive dog grooming",
+      "dog over grooming",
+      "why does my dog lick excessively"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Dog Treat Pouches for Training: Hands-Free Carriers",
+    "category": "gear",
+    "keywords": [
+      "best treat pouch for dog training",
+      "dog training treat bag",
+      "hands free treat pouch"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Building Independence: How to Stop Your Dog's Constant Neediness",
+    "category": "habits",
+    "keywords": [
+      "dog needy behavior",
+      "stop dog neediness",
+      "building dog independence"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Socializing Your Puppy Beyond 16 Weeks: Extended Training Window",
+    "category": "puppies",
+    "keywords": [
+      "puppy socialization after 16 weeks",
+      "continue socializing puppy",
+      "extended socialization period"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop Your Dog From Mounting Other Dogs (Redirected Behavior)",
+    "category": "training",
+    "keywords": [
+      "dog mounting other dogs",
+      "humping behavior in dogs",
+      "stop dog mounting"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Arch His Back? Causes and When to Worry",
+    "category": "behavior",
+    "keywords": [
+      "dog arching back",
+      "dog stretching back",
+      "why does my dog arch"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop Your Dog From Stealing Socks and Underwear",
+    "category": "problems",
+    "keywords": [
+      "dog stealing clothes",
+      "dog eats socks",
+      "stop dog stealing"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Calming Treats for Dogs: Anxiety Relief Options Tested",
+    "category": "gear",
+    "keywords": [
+      "calming treats for dogs",
+      "best anxiety treats dogs",
+      "dog calming chews"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Teach Your Dog to Go to Bed on Command",
+    "category": "training",
+    "keywords": [
+      "teach dog go to bed",
+      "dog bed command training",
+      "settle on mat"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Puppy Nipping During Play: When It Crosses Into Aggression",
+    "category": "puppies",
+    "keywords": [
+      "puppy nipping play",
+      "when puppy play biting dangerous",
+      "puppy aggression signs"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Lean on Me? What This Behavior Really Means",
+    "category": "behavior",
+    "keywords": [
+      "dog leaning on me",
+      "why does dog lean against owner",
+      "dog leaning behavior"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Chew Toys for Teething Puppies: Soothe Sore Gums",
+    "category": "gear",
+    "keywords": [
+      "teething puppy toys",
+      "best chew toys teething",
+      "puppy teething relief"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Excessive Barking at Night: Why Your Dog Won't Stop Howling",
+    "category": "problems",
+    "keywords": [
+      "dog barking at night",
+      "dog howling at night causes",
+      "nighttime barking dog"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Establish a Consistent Bedtime for Your Dog",
+    "category": "habits",
+    "keywords": [
+      "dog bedtime routine",
+      "puppy sleep schedule",
+      "consistent bedtime dog"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Puppy Food Refusal: Why Your Pup Won't Eat and What to Do",
+    "category": "puppies",
+    "keywords": [
+      "puppy won't eat food",
+      "puppy appetite changes",
+      "puppy refusing meals"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Light-Up Collars for Evening Walks: Safety and Style",
+    "category": "gear",
+    "keywords": [
+      "light up dog collar",
+      "LED dog collar",
+      "safety collar for evening walks"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Groan When Lying Down? Normal or Painful?",
+    "category": "behavior",
+    "keywords": [
+      "dog groaning when lying down",
+      "dog makes groaning sounds",
+      "dog sighing behavior"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "How to Stop Your Dog From Stealing Toys From Other Dogs",
+    "category": "training",
+    "keywords": [
+      "dog steals other dogs toys",
+      "resource guarding toys",
+      "stop dog toy stealing"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Washable Pee Pads for Puppy Training: Reusable Options",
+    "category": "gear",
+    "keywords": [
+      "washable puppy pads",
+      "reusable pee pads dogs",
+      "best washable training pads"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Excessive Panting in Dogs: Heat, Anxiety, or Health Issue?",
+    "category": "problems",
+    "keywords": [
+      "dog panting excessively",
+      "excessive panting dog causes",
+      "why does my dog pant so much"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Creating a Midday Routine: Prevent Destructive Afternoon Behavior",
+    "category": "habits",
+    "keywords": [
+      "dog midday routine",
+      "afternoon dog routine",
+      "prevent destructive behavior"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Introducing Your Puppy to Kids: Safety and Training Tips",
+    "category": "puppies",
+    "keywords": [
+      "puppy introductions to children",
+      "puppy meeting kids",
+      "safe puppy kids"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Best Front-Clip Harnesses: Stop Pulling Without Pain",
+    "category": "gear",
+    "keywords": [
+      "front clip harness",
+      "best no pull harness",
+      "front clip vs back clip"
+    ],
+    "status": "done"
+  },
+  {
+    "title_seed": "Why Does My Dog Lick My Feet? Understanding This Odd Habit",
+    "category": "behavior",
+    "keywords": [
+      "dog licking feet",
+      "why does dog lick my feet",
+      "dog foot licking behavior"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Fear of Loud Noises in Dogs: Thunder, Fireworks, and Beyond",
+    "category": "problems",
+    "keywords": [
+      "dog afraid of loud noises",
+      "dog noise sensitivity",
+      "dog scared of sounds"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "How to Stop Your Dog From Jumping in the Car",
+    "category": "training",
+    "keywords": [
+      "dog jumping in car",
+      "how to stop dog jumping in vehicle"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Teaching Your Dog to Ring a Bell: Step-by-Step Guide",
+    "category": "training",
+    "keywords": [
+      "teach dog ring bell",
+      "bell training for dogs"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "How to Teach Your Dog to Bow: Cute Trick Training",
+    "category": "training",
+    "keywords": [
+      "teach dog to bow",
+      "dog bow trick training"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Why Does My Dog Snore? When to Worry vs. Normal",
+    "category": "behavior",
+    "keywords": [
+      "why do dogs snore",
+      "dog snoring causes"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Understanding Submission in Dogs: Body Language Guide",
+    "category": "behavior",
+    "keywords": [
+      "submissive dog behavior",
+      "dog submission signals"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Why Does My Dog Reverse Sneeze? Causes and Relief",
+    "category": "problems",
+    "keywords": [
+      "dog reverse sneezing",
+      "reverse sneezing in dogs causes"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "My Dog Won't Stop Humping: Why and How to Stop It",
+    "category": "problems",
+    "keywords": [
+      "dog humping behavior",
+      "how to stop dog humping"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Excessive Drooling in Dogs: Breed-Related or Medical?",
+    "category": "problems",
+    "keywords": [
+      "why does my dog drool so much",
+      "excessive dog drooling"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Best No-Pull Harnesses for Stubborn Dogs: Reviews",
+    "category": "gear",
+    "keywords": [
+      "no pull harness for dogs",
+      "best harness for pulling dogs"
+    ],
+    "status": "parked"
+  },
+  {
+    "title_seed": "Best Dog Collars for Small Breeds: Comfort and Control",
+    "category": "gear",
+    "keywords": [
+      "best collar for small dogs",
+      "small dog collar options"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Best Retractable Leashes: Pros, Cons, and Safety Tips",
+    "category": "gear",
+    "keywords": [
+      "retractable leash for dogs",
+      "are retractable leashes safe"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Best Dog Training Clicker: How to Choose and Use",
+    "category": "gear",
+    "keywords": [
+      "best dog clicker",
+      "dog training clicker guide"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Establishing a Consistent Bedtime Routine for Dogs",
+    "category": "habits",
+    "keywords": [
+      "dog bedtime routine",
+      "how to create dog sleep schedule"
+    ],
+    "status": "parked"
+  },
+  {
+    "title_seed": "Best Time to Feed Your Dog: Morning vs Evening Feeding",
+    "category": "habits",
+    "keywords": [
+      "best time to feed dog",
+      "dog feeding schedule timing"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "How Often Should You Walk Your Dog? Age and Breed Guide",
+    "category": "habits",
+    "keywords": [
+      "how often to walk dog",
+      "dog walking frequency by age"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Puppy Teething Timeline: When Teeth Fall Out and Grow In",
+    "category": "puppies",
+    "keywords": [
+      "puppy teething timeline",
+      "when do puppies lose teeth"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "How to Stop Puppy Accidents in the House: Prevention Tips",
+    "category": "puppies",
+    "keywords": [
+      "puppy having accidents in house",
+      "puppy potty training regression"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Best Toys for 8-Week-Old Puppies: Safety and Development",
+    "category": "puppies",
+    "keywords": [
+      "best toys for 8 week old puppy",
+      "puppy toy recommendations"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Puppy Ear Infections: Signs, Causes, and Prevention",
+    "category": "puppies",
+    "keywords": [
+      "puppy ear infection signs",
+      "why does my puppy have ear infections"
+    ],
+    "status": "pending"
+  },
+  {
+    "title_seed": "Why Does My Dog Whip Their Tail Hard? Hidden Meanings",
+    "category": "behavior",
+    "keywords": [
+      "dog tail wagging hard",
+      "stiff tail wagging meaning"
     ],
     "status": "pending"
   }
