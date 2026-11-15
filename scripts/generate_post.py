@@ -35,6 +35,9 @@ ENV_PATH = PROJECT_DIR / ".env"
 TOPICS_PATH = PROJECT_DIR / "topics.json"
 PLACEHOLDER_IMAGE = PROJECT_DIR / "assets" / "placeholder-dog.jpg"
 LOG_PATH = PROJECT_DIR / "logs" / "generate_post.log"
+# Ako postoji, objava je namjerno pauzirana: skripta izađe s 0, bez refilla i
+# bez alerta. Fajl je u repou da se pauza vidi u povijesti; razlog piše u njemu.
+PAUSE_PATH = PROJECT_DIR / "PUBLISHING_PAUSED"
 
 CATEGORY_NAMES = {
     "training": "Dog Training",
@@ -317,8 +320,11 @@ def refill_topics(topics, env, dry_run):
         payload = json.dumps({
             "tool": "blog_topic_ideas",
             "input": {
-                "niche": ("dog training, behavior, common problems, gear, "
-                          "daily habits, puppies — practical guides for everyday dog owners"),
+                # 11/2026: samo niša. Opće teme ne rangiraju (GSC: 0 klikova) i
+                # vuku AdSense ocjenu "sadržaj niske vrijednosti".
+                "niche": ("Jack Russell Terriers and other small terriers: training, "
+                          "behavior, energy, prey drive, gear and puppy raising — "
+                          "practical guides from an owner raising a Jack Russell puppy"),
                 "categories": list(CATEGORY_NAMES.keys()),
                 "existing_titles": existing,
                 "count": REFILL_COUNT,
@@ -637,6 +643,16 @@ def create_post(title, slug, content, excerpt, category_id, media_id, status, en
     return retry(do_create, what="WP post create")
 
 
+def publishing_paused():
+    """True ako postoji PUBLISHING_PAUSED. Provjera ide prije refilla, jer bi
+    prazan red tema inače odmah povukao 20 novih."""
+    if not PAUSE_PATH.exists():
+        return False
+    reason = PAUSE_PATH.read_text(encoding="utf-8").strip().splitlines()
+    log(f"Objava pauzirana ({PAUSE_PATH.name}): {reason[0] if reason else 'bez razloga'} — ništa ne objavljujem.")
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generiraj i objavi jedan post na thedoghabit.com")
     parser.add_argument("--dry-run", action="store_true",
@@ -644,6 +660,9 @@ def main():
     parser.add_argument("--publish", action="store_true",
                          help="objavi kao 'publish' umjesto 'draft' (ignorira se u --dry-run)")
     args = parser.parse_args()
+
+    if not args.dry_run and publishing_paused():
+        return
 
     env = load_env(ENV_PATH)
     topics = load_topics()

@@ -9,7 +9,8 @@
  *
  * - THEDOGHABIT_REDIRECTS: duplikat => članak u koji je spojen (301). Radi po
  *   putanji, pa vrijedi i ako se duplikat kasnije prebaci u draft ili obriše.
- * - THEDOGHABIT_NOINDEX: članci s 0 pojavljivanja u 3 mj., stariji od 3 tjedna.
+ * - THEDOGHABIT_NOINDEX: 10/2026 članci s 0 pojavljivanja u 3 mj.; 11/2026 i opće
+ *   teme izvan niše (Jack Russell / terijeri), bez obzira na pojavljivanja.
  *   noindex,follow + izbačeni iz Rank Math sitemapa. Kad se članak preradi
  *   (vlastiti Short, iskustvo, slike), makni ga s popisa.
  *
@@ -22,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 const THEDOGHABIT_REDIRECTS = [
-	'how-establish-consistent-dog-bedtime-routine' => 'dog-bedtime-routine-help-sleep',
+	'how-establish-consistent-dog-bedtime-routine' => 'dog-bedtime-routine-guide', // 11/2026: izravno, cilj je i sam spojen
 	'best-anxiety-dog-beds-anxious-dogs' => 'best-calming-dog-beds-anxious-dogs',
 	'adult-dog-whining-causes-beyond-attention' => 'dog-whining-excessively-causes-solutions',
 	'best-elevated-dog-feeders-digestion' => 'best-elevated-feeding-station-dogs',
@@ -37,6 +38,17 @@ const THEDOGHABIT_REDIRECTS = [
 	'puppy-socialization-window-guide' => 'puppy-socialization-after-16-weeks',
 	'teach-dog-wait-at-door' => 'teach-dog-wait-command-doors',
 	'best-waterproof-dog-beds-messy-incontinent' => 'best-washable-dog-beds-easy-clean',
+
+	// 11/2026: drugi krug (docs/content-prune-2026-11.csv).
+	'why-dog-digging-holes-yard' => 'jack-russell-terrier-digging-escaping-guide',
+	'why-dog-sleeping-so-much' => 'how-much-sleep-do-dogs-need',
+	'dog-bedtime-routine-help-sleep' => 'dog-bedtime-routine-guide',
+	'dog-prey-drive-breed-differences-management' => 'jack-russell-terrier-prey-drive-managing',
+	'puppy-wont-eat-kibble-solutions' => 'puppy-wont-eat-food-causes',
+	'puppy-nipping-during-play-aggression' => 'why-puppy-biting-normal',
+	'best-front-clip-harnesses-stop-pulling' => 'best-dog-harness-pulling-guide',
+	// Autor: user_nicename mijenja se iz 'denis-ai-friends' u 'denis' (wp-cli, vidi PR).
+	'author/denis-ai-friends' => 'author/denis',
 ];
 
 const THEDOGHABIT_NOINDEX = [
@@ -70,7 +82,6 @@ const THEDOGHABIT_NOINDEX = [
 	'teach-dog-drop-it-command-training',
 	'best-reflective-dog-collar-nighttime-safety',
 	'puppy-first-vet-visit-guide',
-	'dog-prey-drive-breed-differences-management',
 	'how-stop-dog-nipping-during-play',
 	'dog-jumping-on-couch-how-to-stop',
 	'dog-licking-paws-constantly-when-worry',
@@ -78,9 +89,9 @@ const THEDOGHABIT_NOINDEX = [
 	'teach-dog-leave-it-command',
 	'why-dog-sniffing-walks',
 	'dog-sleeping-positions-meaning',
-	'jack-russell-terrier-exercise-routine-daily-guide',
-	'jack-russell-terrier-energy-level-never-tired',
-	'jack-russell-terrier-separation-anxiety-causes-fixes',
+	'jack-russell-terrier-exercise-routine-daily-guide', // JRT: preraditi pa maknuti s popisa
+	'jack-russell-terrier-energy-level-never-tired', // JRT: preraditi pa maknuti s popisa
+	'jack-russell-terrier-separation-anxiety-causes-fixes', // JRT: preraditi pa maknuti s popisa
 	'puppy-vaccination-schedule-guide',
 	'dog-mental-enrichment-activities-keep-happy',
 	'how-to-create-dog-feeding-schedule',
@@ -88,7 +99,7 @@ const THEDOGHABIT_NOINDEX = [
 	'how-much-exercise-dogs-need',
 	'how-to-stop-dog-jumping',
 	'why-does-my-dog-eat-grass',
-	'best-harness-jack-russell-terrier',
+	'best-harness-jack-russell-terrier', // JRT: preraditi pa maknuti s popisa
 	'why-dog-suddenly-aggressive-causes',
 	'gps-dog-tracker-review-worth-it',
 	'resource-guarding-dog-causes-fixes',
@@ -98,6 +109,48 @@ const THEDOGHABIT_NOINDEX = [
 	'dog-crate-size-guide-choose-right',
 	'why-dog-barks-everything-triggers',
 	'crate-training-dog-week-by-week',
+
+	// 11/2026: opće teme izvan niše Jack Russell / terijeri.
+	'how-to-stop-dog-chewing-furniture',
+	'dog-not-listening-obedience-troubleshooting',
+	'puppy-proofing-house-room-by-room',
+	'how-much-sleep-do-dogs-need',
+	'how-to-stop-dog-counter-surfing',
+	'why-dog-follows-me-everywhere',
+	'introduce-puppy-to-adult-dog-safely',
+	'dog-whining-excessively-causes-solutions',
+	'why-does-my-dog-eat-dirt',
+	'dog-bell-training-teach-ring-bell',
+	'dog-grooming-routine-complete-guide',
+	'best-elevated-feeding-station-dogs',
+	'dog-scratching-excessively-allergies-vs-behavior',
+	'best-leash-for-reactive-dogs',
+	'teach-dog-settle-on-mat-guide',
+	'dog-wont-eat-medical-behavioral-causes',
+	'dog-walk-schedule-time-distance-guide',
+	'best-calming-dog-beds-anxious-dogs',
+	'how-to-stop-dog-stealing-food',
+	'puppy-hiccups-normal-concern',
+	'why-dog-groom-excessively',
+	'best-treat-pouch-dog-training',
+	'dog-needy-behavior-building-independence',
+	'puppy-socialization-after-16-weeks',
+	'how-to-stop-dog-mounting-other-dogs',
+	'why-does-dog-arch-back',
+	'how-to-stop-dog-stealing-clothes',
+	'best-calming-treats-dogs-anxiety',
+	'how-to-teach-dog-go-to-bed',
+	'why-does-my-dog-lean-on-me',
+	'dog-barking-at-night-causes-solutions',
+	'puppy-wont-eat-food-causes',
+	'best-light-up-dog-collar-evening-walks',
+	'dog-groaning-when-lying-down-normal-painful',
+	'dog-steals-other-dogs-toys-training',
+	'best-washable-puppy-pads-reusable',
+	'dog-panting-excessively-causes-when-worry',
+	'dog-midday-routine-prevent-destructive-behavior',
+	'puppy-introductions-children-safety-training',
+	'why-does-dog-lick-feet',
 ];
 
 function thedoghabit_request_slug() {
