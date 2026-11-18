@@ -1,0 +1,97 @@
+{
+  "post_id": 87,
+  "slug": "best-toys-jack-russell-terrier",
+  "post_title": "Best Toys for Jack Russell Terriers: What Survived Our Puppy",
+  "meta": {
+    "rank_math_title": "Best Toys for Jack Russell Terriers: What Actually Survived",
+    "rank_math_description": "We put all 8 toys of Tery, our 5-month-old, 6.3 kg Jack Russell, on the floor. Three look new after 2 months, two went in the bin. Photos and safety notes.",
+    "rank_math_focus_keyword": "best toys jack russell terrier",
+    "thedoghabit_products": [
+      {
+        "name": "Spiky rubber ball for dogs",
+        "query": "spiky rubber dog ball small",
+        "note": "Our yellow one: no damage after 2 months of daily chewing."
+      },
+      {
+        "name": "Rubber treat-dispensing ball",
+        "query": "rubber treat dispensing dog ball small",
+        "note": "Our green one: firm, undamaged, good for mental work."
+      },
+      {
+        "name": "Rubber chew ring",
+        "query": "rubber chew ring dog small",
+        "note": "Our blue star ring: no visible damage after 2 months."
+      },
+      {
+        "name": "Cotton rope tug toy",
+        "query": "cotton rope tug toy small dog",
+        "note": "Tug together only, trim loose tassels."
+      }
+    ],
+    "thedoghabit_faq": [
+      {
+        "question": "What toys are safe for a Jack Russell puppy to chew alone?",
+        "answer": "In our experience, solid, firm rubber toys: a spiky ball, a treat-dispensing ball and a rubber ring all lasted two months of daily chewing by our 5-month-old Jack Russell without visible damage. Check them regularly anyway and remove any toy that starts losing pieces."
+      },
+      {
+        "question": "Are rope toys safe for Jack Russell Terriers?",
+        "answer": "Ropes are fine for supervised tug games, but they should not be left with the dog to chew alone. Loose fibres can be swallowed, and a long thread can cause serious intestinal damage. Trim long tassels and throw the rope away once it starts coming apart."
+      },
+      {
+        "question": "When should I throw a dog toy away?",
+        "answer": "As soon as pieces start coming off, when a coated toy is chewed through to the foam or filling underneath, or when a rope is badly frayed and stringy. A damaged toy is a swallowing risk, not just a worn-out toy."
+      },
+      {
+        "question": "Why does my Jack Russell puppy chew everything?",
+        "answer": "Puppies change their teeth at around four to six months, and chewing soothes their gums. Jack Russells also have a strong drive to grab, shake and carry things. Giving them durable toys they are allowed to chew helps keep slippers and bottles safe."
+      }
+    ]
+  },
+  "images": {
+    "tery-couch": {
+      "src": "assets/tery-foto/20261009_171746.jpg",
+      "alt": "Tery, a 5-month-old Jack Russell Terrier puppy, lying on a couch cushion",
+      "caption": "Tery, 5 months, 6.3 kg."
+    },
+    "tery-floor": {
+      "src": "assets/tery-foto/20261015_153844.jpg",
+      "alt": "Jack Russell puppy sitting on a wooden floor looking up at the camera",
+      "caption": "Tery at home."
+    },
+    "01": {
+      "src": "assets/tery-toys/img/01-zuta-loptica-bodlje.jpg",
+      "alt": "Yellow spiky rubber dog ball with no visible damage",
+      "caption": "Survived: yellow spiky ball, all spikes intact after 2 months."
+    },
+    "02": {
+      "src": "assets/tery-toys/img/02-zelena-loptica-poslastice.jpg",
+      "alt": "Green rubber treat-dispensing dog ball with a hole for treats",
+      "caption": "Survived: green treat ball, firm and undamaged."
+    },
+    "06": {
+      "src": "assets/tery-toys/img/06-plava-zvijezda-prsten.jpg",
+      "alt": "Blue star-shaped rubber chew ring for dogs",
+      "caption": "Survived: blue rubber ring, no visible damage."
+    },
+    "04": {
+      "src": "assets/tery-toys/img/04-uze-krem-kost-i-plava-kost.jpg",
+      "alt": "Rope toy with a cream rubber bone and frayed tassels, next to a blue rubber bone with chewed ends",
+      "caption": "Watching: rope tassels need trimming, the blue bone is chewed at both ends."
+    },
+    "05": {
+      "src": "assets/tery-toys/img/05-narancasto-plavo-uze-cvorovi.jpg",
+      "alt": "Orange and blue knotted rope dog toy with frayed ends",
+      "caption": "Watching: knots still tight, ends frayed."
+    },
+    "03": {
+      "src": "assets/tery-toys/img/03-crveno-bijela-loptica.jpg",
+      "alt": "Red and white dog football with the outer layer chewed off and foam showing",
+      "caption": "Binned: outer layer chewed through, foam exposed."
+    },
+    "07": {
+      "src": "assets/tery-toys/img/07-pastelna-uze-bucica.jpg",
+      "alt": "Pastel rope dog toy, badly stretched with one dark frayed end",
+      "caption": "Binned: stretched rope, one end coming apart."
+    }
+  }
+}
